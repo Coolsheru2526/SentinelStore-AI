@@ -1,0 +1,46 @@
+# FastAPI and web server
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+python-multipart==0.0.6
+
+# LangGraph and LangChain
+langgraph
+langchain-groq
+langchain-core
+langchain
+
+# Environment variables
+python-dotenv==1.0.0
+
+# HTTP requests
+requests==2.31.0
+
+typing-extensions==4.8.0
+
+# LLM Providers
+# (Azure OpenAI OR OpenAI compatible)
+openai
+
+# RAG & Vector Stores
+
+faiss-cpu
+tiktoken
+sentence-transformers
+
+# Azure AI Services (MANDATORY)
+azure-ai-vision-imageanalysis
+azure-cognitiveservices-speech
+azure-core
+azure-identity
+
+# Twilio for SMS/Voice Calls
+twilio
+
+# SendGrid for Email (Twilio-owned)
+sendgrid
+
+# Testing
+# pytest
+# pytest-asyncio
+# httpx
