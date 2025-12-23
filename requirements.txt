@@ -4,6 +4,14 @@ uvicorn[standard]==0.24.0
 pydantic==2.5.0
 python-multipart==0.0.6
 
+# Authentication
+python-jose[cryptography]
+passlib[bcrypt]
+
+# Database
+pymongo
+motor  # Async MongoDB driver for FastAPI
+
 # LangGraph and LangChain
 langgraph
 langchain-groq
@@ -23,7 +31,7 @@ typing-extensions==4.8.0
 openai
 
 # RAG & Vector Stores
-
+chromadb  # Persistent vector DB
 faiss-cpu
 tiktoken
 sentence-transformers

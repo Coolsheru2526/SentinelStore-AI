@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uuid
@@ -17,6 +17,10 @@ from services.azure_speech import process_audio, decode_base64_audio
 # from services.azure_video_indexer import process_video  # Commented out - using direct frame extraction instead
 import os
 from dotenv import load_dotenv
+from database import connect_to_mongo, close_mongo_connection, incidents_collection
+from auth_router import router as auth_router
+from models import User
+from auth import get_current_user
 load_dotenv()
 # Setup logging
 setup_logging(logging.INFO)
@@ -43,10 +47,19 @@ import json as _json
 
 vector_store = load_store_policy("rag/policy.txt")
 rag_engine = RAGEngine(vector_store)
-logger.info(f"RAG Engine initialized with {len(vector_store.documents)} policy documents")
+logger.info(f"RAG Engine initialized with {vector_store.collection.count()} policy documents")
 
 app = FastAPI()
 logger.info("FastAPI application initialized")
+
+@app.on_event("startup")
+async def startup_event():
+    await connect_to_mongo()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    await close_mongo_connection()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -54,6 +67,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
 
 @app.get("/health", tags=["System"])
 def health():
@@ -64,14 +79,20 @@ def health():
 def info():
     logger.debug("Info endpoint requested")
     return {
-        "available_endpoints": ["/incident", "/human/{incident_id}", "/health", "/info"],
-        "description": "Retail Autonomous Incident System API, Azure OpenAI LLM, dynamic RAG policies."
+        "available_endpoints": ["/auth/login", "/auth/register", "/incident", "/human/{incident_id}", "/health", "/info"],
+        "description": "Retail Autonomous Incident System API with MongoDB and Authentication."
     }
 
-INCIDENTS = {}
-
 @app.post("/incident", response_model=IncidentCreateResponse, tags=["Incidents"])
-def create_incident(payload: IncidentCreateRequest):
+async def create_incident(payload: IncidentCreateRequest, current_user: User = Depends(get_current_user)):
+    """Create a new incident and run through initial state machine."""
+    # Check if user has access to the store
+    if current_user.store_id != payload.store_id:
+        raise HTTPException(status_code=403, detail="Access denied: Incident store does not match user store")
+
+    incident_id = str(uuid.uuid4())
+    logger.info(f"[INCIDENT-{incident_id}] Creating new incident for store: {payload.store_id} by user: {current_user.username}")
+    logger.debug(f"[INCIDENT-{incident_id}] Payload: store_id={payload.store_id}, signals={payload.signals}")
     """Create a new incident and run through initial state machine."""
     incident_id = str(uuid.uuid4())
     logger.info(f"[INCIDENT-{incident_id}] Creating new incident for store: {payload.store_id}")
@@ -171,24 +192,84 @@ def create_incident(payload: IncidentCreateRequest):
     
     try:
         logger.info(f"[INCIDENT-{incident_id}] Invoking incident graph...")
-        INCIDENTS[incident_id] = incident_graph.invoke(state)
-        logger.info(f"[INCIDENT-{incident_id}] Graph execution completed. Resolved: {INCIDENTS[incident_id].get('resolved', False)}")
+        result_state = incident_graph.invoke(state)
+        logger.info(f"[INCIDENT-{incident_id}] Graph execution completed. Resolved: {result_state.get('resolved', False)}")
+
+        # Save to MongoDB - create serializable state
+        serializable_state = {k: v for k, v in result_state.items() if k not in ['rag_engine', 'llm']}
+        # Handle reflection separately if it's an AIMessage
+        if 'reflection' in result_state and hasattr(result_state['reflection'], 'content'):
+            serializable_state['reflection'] = result_state['reflection'].content
+        elif 'reflection' in result_state:
+            serializable_state['reflection'] = str(result_state['reflection'])
+
+        incident_doc = {
+            "_id": incident_id,
+            "store_id": payload.store_id,
+            "state": serializable_state,
+            "resolved": result_state.get("resolved", False),
+            "severity": result_state.get("severity"),
+            "risk_score": result_state.get("risk_score"),
+            "incident_type": result_state.get("incident_type"),
+            "plan": str(result_state.get("plan")),
+            "execution_results": str(result_state.get("execution_results")),
+            "reflection": serializable_state.get("reflection"),
+            "explanation": result_state.get("explanation")
+        }
+        await incidents_collection.insert_one(incident_doc)
+        logger.info(f"[INCIDENT-{incident_id}] Saved to database")
+
         return {"incident_id": incident_id}
     except Exception as e:
         logger.error(f"[INCIDENT-{incident_id}] Graph execution failed: {str(e)}", exc_info=True)
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.post("/human/{incident_id}", tags=["Incidents"])
-def human_decision(incident_id: str, payload: HumanDecisionRequest):
-    logger.info(f"[INCIDENT-{incident_id}] Human decision received: {payload.decision}")
-    if incident_id not in INCIDENTS:
+async def human_decision(incident_id: str, payload: HumanDecisionRequest, current_user: User = Depends(get_current_user)):
+    logger.info(f"[INCIDENT-{incident_id}] Human decision received: {payload.decision} by user: {current_user.username}")
+
+    incident_doc = await incidents_collection.find_one({"_id": incident_id})
+    if not incident_doc:
         logger.warning(f"[INCIDENT-{incident_id}] Incident not found")
         return JSONResponse(status_code=404, content={"error":"Incident not found."})
-    INCIDENTS[incident_id]["human_decision"] = payload.decision
+
+    # Check store access
+    if incident_doc["store_id"] != current_user.store_id:
+        raise HTTPException(status_code=403, detail="Access denied: Incident store does not match user store")
+
+    state = incident_doc["state"]
+    state["human_decision"] = payload.decision
+    # Add back the required objects for graph execution
+    state["rag_engine"] = rag_engine
+    state["llm"] = llm
+
     try:
         logger.info(f"[INCIDENT-{incident_id}] Resuming graph execution with human decision...")
-        INCIDENTS[incident_id] = incident_graph.invoke(INCIDENTS[incident_id])
+        updated_state = incident_graph.invoke(state)
         logger.info(f"[INCIDENT-{incident_id}] Graph resumed successfully")
+
+        # Update in MongoDB - create serializable state
+        serializable_updated_state = {k: v for k, v in updated_state.items() if k not in ['rag_engine', 'llm']}
+        if 'reflection' in updated_state and hasattr(updated_state['reflection'], 'content'):
+            serializable_updated_state['reflection'] = updated_state['reflection'].content
+        elif 'reflection' in updated_state:
+            serializable_updated_state['reflection'] = str(updated_state['reflection'])
+
+        await incidents_collection.update_one(
+            {"_id": incident_id},
+            {"$set": {
+                "state": serializable_updated_state,
+                "resolved": updated_state.get("resolved", False),
+                "severity": updated_state.get("severity"),
+                "risk_score": updated_state.get("risk_score"),
+                "incident_type": updated_state.get("incident_type"),
+                "plan": str(updated_state.get("plan")),
+                "execution_results": str(updated_state.get("execution_results")),
+                "reflection": serializable_updated_state.get("reflection"),
+                "explanation": updated_state.get("explanation")
+            }}
+        )
+
         return {"status":"resumed"}
     except Exception as e:
         logger.error(f"[INCIDENT-{incident_id}] Graph resume failed: {str(e)}", exc_info=True)

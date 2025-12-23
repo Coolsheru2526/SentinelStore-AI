@@ -1,9 +1,8 @@
-import asyncio
 import json
 import logging
 import cv2
 import numpy as np
-from concurrent.futures import ThreadPoolExecutor
+import concurrent.futures
 from state import IncidentState
 from config.logging_config import get_logger
 from services.azure_vision import process_image
@@ -89,37 +88,6 @@ def extract_frames_from_video(video_bytes: bytes, frame_interval: int = 30) -> l
         'detected_objects': objects[:10]  # Top 10 objects
     }
 
-async def process_frame_async(frame_data: bytes, frame_id: str) -> dict:
-    """Process a single frame asynchronously."""
-    try:
-        logger.debug(f"Processing frame {frame_id}")
-        result = await asyncio.get_event_loop().run_in_executor(
-            None, process_image, frame_data
-        )
-        result['frame_id'] = frame_id
-        
-        # Log significant findings
-        if result.get('processed', False):
-            objects_count = len(result.get('objects', []))
-            people_count = len(result.get('people', []))
-            caption = result.get('caption', {}).get('text', '')
-            
-            if objects_count > 0 or people_count > 0 or caption:
-                logger.debug(f"Frame {frame_id} results: {objects_count} objects, {people_count} people, caption: {caption[:30]}...")
-        
-        return result
-    except Exception as e:
-        logger.error(f"Failed to process frame {frame_id}: {e}", exc_info=True)
-        return {
-            "frame_id": frame_id,
-            "processed": False,
-            "error": str(e),
-            "objects": [],
-            "people": [],
-            "text": "",
-            "caption": ""
-        }
-
 def video_react_node(state: IncidentState) -> IncidentState:
     incident_id = state.get("incident_id", "unknown")
     logger.info(f"[INCIDENT-{incident_id}] [VIDEO] Starting video analysis node")
@@ -149,20 +117,65 @@ def video_react_node(state: IncidentState) -> IncidentState:
 
     logger.info(f"[INCIDENT-{incident_id}] [VIDEO] Processing {len(frames)} frames in parallel")
 
-    # Create async tasks for parallel processing
-    async def process_all_frames():
-        tasks = []
-        for frame_id, frame_data in frames:
-            tasks.append(process_frame_async(frame_data, frame_id))
-        
-        if tasks:
-            logger.info(f"Starting parallel processing of {len(tasks)} frames...")
-            return await asyncio.gather(*tasks)
-        return []
+    # Process frames synchronously using threading for parallelism
+    import concurrent.futures
+    
+    def process_frame_sync(frame_data: bytes, frame_id: str) -> dict:
+        """Process a single frame synchronously."""
+        try:
+            logger.debug(f"Processing frame {frame_id}")
+            result = process_image(frame_data)
+            result['frame_id'] = frame_id
+            
+            # Log significant findings
+            if result.get('processed', False):
+                objects_count = len(result.get('objects', []))
+                people_count = len(result.get('people', []))
+                caption = result.get('caption', {}).get('text', '')
+                
+                if objects_count > 0 or people_count > 0 or caption:
+                    logger.debug(f"Frame {frame_id} results: {objects_count} objects, {people_count} people, caption: {caption[:30]}...")
+            
+            return result
+        except Exception as e:
+            logger.error(f"Failed to process frame {frame_id}: {e}", exc_info=True)
+            return {
+                "frame_id": frame_id,
+                "processed": False,
+                "error": str(e),
+                "objects": [],
+                "people": [],
+                "text": "",
+                "caption": ""
+            }
 
-    # Run parallel processing
+    # Run parallel processing using ThreadPoolExecutor
     try:
-        frame_results = asyncio.run(process_all_frames())
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            # Submit all tasks
+            future_to_frame = {
+                executor.submit(process_frame_sync, frame_data, frame_id): (frame_id, frame_data)
+                for frame_id, frame_data in frames
+            }
+            
+            frame_results = []
+            for future in concurrent.futures.as_completed(future_to_frame):
+                try:
+                    result = future.result()
+                    frame_results.append(result)
+                except Exception as e:
+                    frame_id, _ = future_to_frame[future]
+                    logger.error(f"Frame {frame_id} processing failed: {e}")
+                    frame_results.append({
+                        "frame_id": frame_id,
+                        "processed": False,
+                        "error": str(e),
+                        "objects": [],
+                        "people": [],
+                        "text": "",
+                        "caption": ""
+                    })
+        
         logger.info(f"[INCIDENT-{incident_id}] [VIDEO] Processed {len(frame_results)} frames")
 
         # Aggregate frame results

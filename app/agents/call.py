@@ -48,11 +48,11 @@ def call_execution_node(state):
         twiml_response.say(script, voice='alice', language='en-US')
         
         # Commented out actual call due to limited credit
-        call = client.calls.create(
-            to=to_phone,
-            from_=TWILIO_PHONE_NUMBER,
-            twiml=twiml_response.to_xml()
-        )
+        # call = client.calls.create(
+        #     to=to_phone,
+        #     from_=TWILIO_PHONE_NUMBER,
+        #     twiml=twiml_response.to_xml()
+        # )
         
         print("Call is made for now")
         
