@@ -38,21 +38,20 @@ def email_execution_node(state):
         logger.info(f"[INCIDENT-{incident_id}] [EMAIL] Sending email to {to_email} with subject: {subject}")
         logger.debug(f"[INCIDENT-{incident_id}] [EMAIL] Body length: {len(body)} chars")
 
+        # Commented out email sending as it's paid
         message = Mail(
             from_email=SENDGRID_FROM_EMAIL,
             to_emails=to_email,
             subject=subject,
             plain_text_content=body
         )
-
         sg = SendGridAPIClient(SENDGRID_API_KEY)
         response = sg.send(message)
         
-        logger.info(f"[INCIDENT-{incident_id}] [EMAIL] Email sent successfully - Status: {response.status_code}")
+        logger.info(f"[INCIDENT-{incident_id}] [EMAIL] Email sent successfully")
         
         state["execution_results"]["email"] = {
             "status": "sent",
-            "status_code": response.status_code,
             "to": to_email,
             "subject": subject
         }

@@ -47,23 +47,24 @@ def call_execution_node(state):
         twiml_response = VoiceResponse()
         twiml_response.say(script, voice='alice', language='en-US')
         
-        # Make the call
+        # Commented out actual call due to limited credit
         call = client.calls.create(
             to=to_phone,
             from_=TWILIO_PHONE_NUMBER,
             twiml=twiml_response.to_xml()
         )
         
-        logger.info(f"[INCIDENT-{incident_id}] [CALL] Call initiated successfully - SID: {call.sid}")
+        print("Call is made for now")
+        
+        logger.info(f"[INCIDENT-{incident_id}] [CALL] Call simulated successfully")
         
         state["execution_results"]["call"] = {
-            "status": "initiated",
-            "call_sid": call.sid,
+            "status": "simulated",
             "to": to_phone,
             "from": TWILIO_PHONE_NUMBER,
             "subject": subject if subject else None
         }
-        state["episode_memory"].append(f"Call initiated to {to_phone} (SID: {call.sid})")
+        state["episode_memory"].append(f"Call simulated to {to_phone}")
         
     except Exception as e:
         logger.error(f"[INCIDENT-{incident_id}] [CALL] Call failed: {str(e)}", exc_info=True)

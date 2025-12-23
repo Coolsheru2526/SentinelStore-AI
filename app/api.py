@@ -14,6 +14,7 @@ from rag.rag_engine import RAGEngine
 from config.logging_config import setup_logging, get_logger
 from services.azure_vision import process_image, decode_base64_image
 from services.azure_speech import process_audio, decode_base64_audio
+# from services.azure_video_indexer import process_video  # Commented out - using direct frame extraction instead
 import os
 from dotenv import load_dotenv
 load_dotenv()
@@ -100,6 +101,19 @@ def create_incident(payload: IncidentCreateRequest):
             logger.error(f"[INCIDENT-{incident_id}] Audio processing failed: {e}", exc_info=True)
             audio_observation = {"error": str(e), "processed": False}
     
+    # Process video observation if provided
+    video_observation = None
+    if payload.video_observation:
+        try:
+            logger.info(f"[INCIDENT-{incident_id}] Processing video observation - extracting frames for vision analysis...")
+            video_bytes = decode_base64_image(payload.video_observation)  # Reuse decode function
+            # NEW: Pass raw video bytes instead of using Azure Video Indexer
+            video_observation = {"video_bytes": video_bytes, "filename": "uploaded_video.mp4"}
+            logger.info(f"[INCIDENT-{incident_id}] Video bytes extracted for frame processing")
+        except Exception as e:
+            logger.error(f"[INCIDENT-{incident_id}] Video processing failed: {e}", exc_info=True)
+            video_observation = {"error": str(e), "processed": False}
+    
     # Initialize complete state according to IncidentState TypedDict
     state = {
         # Identity
@@ -109,10 +123,12 @@ def create_incident(payload: IncidentCreateRequest):
         # Observations (processed by Azure services)
         "vision_observation": vision_observation,
         "audio_observation": audio_observation,
+        "video_observation": video_observation,
         
         # ReAct judged signals (will be populated by vision/speech nodes)
         "vision_signal": None,
         "audio_signal": None,
+        "video_signal": None,
         
         # Fusion output (will be populated by fusion node)
         "fused_incident": None,

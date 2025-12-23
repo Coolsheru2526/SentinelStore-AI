@@ -1,6 +1,80 @@
+# =========================
+# Environment variables
+# =========================
 .env
-tests
-.venv
-TESTING_GUIDE.md
-TWILIO_SETUP.md
-AZURE_SERVICE.md
+.env.*
+*.env
+
+# =========================
+# Virtual environments
+# =========================
+venv/
+.venv/
+ENV/
+env/
+
+# =========================
+# Python cache / compiled
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+
+# =========================
+# Python build artifacts
+# =========================
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# =========================
+# Logs
+# =========================
+*.log
+
+# =========================
+# IDE / Editor files
+# =========================
+.vscode/
+.idea/
+*.iml
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Test / coverage
+# =========================
+.pytest_cache/
+.coverage
+htmlcov/
+
+# =========================
+# Azure / Cloud
+# =========================
+.azure/
+local.settings.json
+
+# =========================
+# Jupyter
+# =========================
+.ipynb_checkpoints/
+
+# =========================
+# Temporary files
+# =========================
+tmp/
+temp/
+
+# =========================
+# Secrets
+# =========================
+*.pem
+*.key
+*.crt

@@ -7,10 +7,12 @@ class IncidentState(TypedDict):
 
     vision_observation: Optional[Dict[str, Any]]
     audio_observation: Optional[Dict[str, Any]]
+    video_observation: Optional[Dict[str, Any]]
 
     # judged signals
     vision_signal: Optional[Dict[str, Any]]
     audio_signal: Optional[Dict[str, Any]]
+    video_signal: Optional[Dict[str, Any]]
 
     # Fusion output
     fused_incident: Optional[Dict[str, Any]]

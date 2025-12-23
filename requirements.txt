@@ -34,6 +34,9 @@ azure-cognitiveservices-speech
 azure-core
 azure-identity
 
+# Video processing
+opencv-python
+
 # Twilio for SMS/Voice Calls
 twilio
 

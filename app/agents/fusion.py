@@ -12,11 +12,12 @@ def fusion_understanding_node(state: IncidentState) -> IncidentState:
     llm = state["llm"]
     vision_signal = state.get("vision_signal")
     audio_signal = state.get("audio_signal")
+    video_signal = state.get("video_signal")
     
-    logger.debug(f"[INCIDENT-{incident_id}] [FUSION] Vision signal: {vision_signal is not None}, Audio signal: {audio_signal is not None}")
+    logger.debug(f"[INCIDENT-{incident_id}] [FUSION] Vision signal: {vision_signal is not None}, Audio signal: {audio_signal is not None}, Video signal: {video_signal is not None}")
     
     prompt = f"""
-You are a retail fusion agent specializing in combining vision+audio signals from retail incidents into a single coherent JSON summary.
+You are a retail fusion agent specializing in combining vision+audio+video signals from retail incidents into a single coherent JSON summary.
 Use only the supplied evidence, do not hallucinate, and ALWAYS reply with this JSON shape (no commentary!):
 {{
   "incident_type": <str>,
@@ -27,6 +28,7 @@ Use only the supplied evidence, do not hallucinate, and ALWAYS reply with this J
 
 VISION SIGNAL: {vision_signal}
 AUDIO SIGNAL: {audio_signal}
+VIDEO SIGNAL: {video_signal}
 """
     try:
         logger.debug(f"[INCIDENT-{incident_id}] [FUSION] Invoking LLM for fusion...")
