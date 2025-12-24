@@ -6,7 +6,8 @@ from bson import ObjectId
 class User(BaseModel):
     id: Optional[str] = Field(default=None, alias="_id")
     username: str
-    email: str
+    # Email is optional – accounts can be created with just username/password.
+    email: Optional[str] = None
     hashed_password: str
     full_name: str = ""
     role: str = "employee"  # "manager", "employee", etc.

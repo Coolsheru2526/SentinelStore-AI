@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, Depends
+from fastapi import FastAPI, File, UploadFile, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uuid
@@ -69,6 +69,51 @@ app.add_middleware(
 )
 
 app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
+
+def sanitize_state_for_json(state: dict) -> dict:
+    """Remove or convert binary data from state to make it JSON-serializable."""
+    if not isinstance(state, dict):
+        return state
+    
+    sanitized = {}
+    for key, value in state.items():
+        if value is None:
+            sanitized[key] = None
+        elif isinstance(value, bytes):
+            # For binary data, just indicate its presence and size (don't send actual bytes)
+            sanitized[key] = f"<binary data: {len(value)} bytes>"
+        elif isinstance(value, dict):
+            # Recursively sanitize nested dictionaries
+            sanitized_value = sanitize_state_for_json(value)
+            # Special handling for video_observation - remove video_bytes entirely
+            if key in ['vision_observation', 'audio_observation', 'video_observation']:
+                # Remove binary data from observations, keep only metadata
+                if 'video_bytes' in sanitized_value:
+                    sanitized_value = {k: v for k, v in sanitized_value.items() if k != 'video_bytes'}
+                    sanitized_value['_note'] = 'video_bytes removed for JSON serialization'
+                if 'image_bytes' in sanitized_value:
+                    sanitized_value = {k: v for k, v in sanitized_value.items() if k != 'image_bytes'}
+                    sanitized_value['_note'] = 'image_bytes removed for JSON serialization'
+                if 'audio_bytes' in sanitized_value:
+                    sanitized_value = {k: v for k, v in sanitized_value.items() if k != 'audio_bytes'}
+                    sanitized_value['_note'] = 'audio_bytes removed for JSON serialization'
+            sanitized[key] = sanitized_value
+        elif isinstance(value, list):
+            sanitized[key] = [
+                sanitize_state_for_json(item) if isinstance(item, dict) else
+                (f"<binary data: {len(item)} bytes>" if isinstance(item, bytes) else item)
+                for item in value
+            ]
+        elif isinstance(value, (str, int, float, bool)):
+            sanitized[key] = value
+        else:
+            # For other types (like objects), convert to string
+            try:
+                sanitized[key] = str(value)
+            except Exception:
+                sanitized[key] = "<non-serializable object>"
+    
+    return sanitized
 
 @app.get("/health", tags=["System"])
 def health():
@@ -274,3 +319,59 @@ async def human_decision(incident_id: str, payload: HumanDecisionRequest, curren
     except Exception as e:
         logger.error(f"[INCIDENT-{incident_id}] Graph resume failed: {str(e)}", exc_info=True)
         return JSONResponse(status_code=500, content={"error":str(e)})
+
+
+@app.get("/incidents", tags=["Incidents"])
+async def list_incidents(current_user: User = Depends(get_current_user)):
+    """List recent incidents for the current user's store.
+
+    Returns a lightweight summary of each incident plus key fields from the
+    stored state so the frontend can render current status."""
+    query = {"store_id": current_user.store_id}
+    cursor = incidents_collection.find(query).sort("_id", -1).limit(20)
+    docs = await cursor.to_list(length=20)
+
+    incidents = []
+    for doc in docs:
+        state = doc.get("state", {})
+        incidents.append({
+            "incident_id": doc.get("_id"),
+            "store_id": doc.get("store_id"),
+            "incident_type": doc.get("incident_type") or state.get("incident_type"),
+            "severity": doc.get("severity") or state.get("severity"),
+            "risk_score": doc.get("risk_score") or state.get("risk_score"),
+            "resolved": doc.get("resolved", False),
+            "requires_human": state.get("requires_human"),
+            "escalation_required": state.get("escalation_required"),
+        })
+
+    return {"incidents": incidents}
+
+
+@app.get("/incident/{incident_id}", tags=["Incidents"])
+async def get_incident(incident_id: str, current_user: User = Depends(get_current_user)):
+    """Return full incident document including stored state for a single incident."""
+    incident_doc = await incidents_collection.find_one({"_id": incident_id})
+    if not incident_doc:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    if incident_doc["store_id"] != current_user.store_id:
+        raise HTTPException(status_code=403, detail="Access denied: Incident store does not match user store")
+
+    state = incident_doc.get("state", {})
+    
+    # Sanitize state to remove binary data that can't be JSON-serialized
+    sanitized_state = sanitize_state_for_json(state)
+
+    return {
+        "incident_id": incident_doc.get("_id"),
+        "store_id": incident_doc.get("store_id"),
+        "resolved": incident_doc.get("resolved", False),
+        "severity": incident_doc.get("severity"),
+        "risk_score": incident_doc.get("risk_score"),
+        "incident_type": incident_doc.get("incident_type"),
+        "plan": incident_doc.get("plan"),
+        "execution_results": incident_doc.get("execution_results"),
+        "explanation": incident_doc.get("explanation"),
+        "state": sanitized_state,
+    }

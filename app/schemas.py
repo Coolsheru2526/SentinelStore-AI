@@ -18,12 +18,18 @@ class HumanDecisionRequest(BaseModel):
 
 # Auth schemas
 class UserCreate(BaseModel):
+    """User registration payload.
+
+    Only username and password are required for authentication. Email is optional
+    so that accounts can be created without providing an email address.
+    """
+
     username: str
-    email: str
     password: str
     full_name: str = ""
     role: str = "employee"
     store_id: str
+    email: Optional[str] = None
 
 class UserLogin(BaseModel):
     username: str
