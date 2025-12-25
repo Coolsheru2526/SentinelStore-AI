@@ -10,13 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@chakra-ui/form-control": "^2.2.0",
-    "@chakra-ui/input": "^2.1.2",
-    "@chakra-ui/react": "^3.30.0",
-    "@chakra-ui/toast": "^7.0.2",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@hookform/resolvers": "^5.2.2",
+    "@mui/icons-material": "^5.15.0",
+    "@mui/lab": "^5.0.0-alpha.173",
+    "@mui/material": "^5.15.0",
     "@tanstack/react-query": "^5.90.12",
     "axios": "^1.13.2",
     "framer-motion": "^12.23.26",

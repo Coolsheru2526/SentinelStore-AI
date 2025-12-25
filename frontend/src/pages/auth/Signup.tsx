@@ -3,36 +3,58 @@ import { useNavigate, Link } from 'react-router-dom';
 import {
   Box,
   Button,
-  Input,
-  Heading,
-  Text,
-  Flex,
+  TextField,
+  Typography,
   Container,
-  Icon,
-  VStack,
-  HStack,
-  SimpleGrid,
-  Badge
-} from '@chakra-ui/react';
-import { FiUser, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
+  Stack,
+  Grid,
+  IconButton,
+  InputAdornment,
+  Chip,
+  Paper,
+  Alert,
+  Fade,
+} from '@mui/material';
+import { FiUser, FiLock, FiEye, FiEyeOff, FiUserPlus, FiShoppingBag } from 'react-icons/fi';
+import { Icon } from '@mui/material';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
 
 export const Signup = () => {
   const [username, setUsername] = useState('');
-  const [storeId, setStoreId] = useState('store_1');
+  const [fullName, setFullName] = useState('');
+  const [storeId, setStoreId] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
+    // Validation
+    if (!username.trim()) {
+      setError('Username is required');
+      return;
+    }
+    if (!fullName.trim()) {
+      setError('Full Name is required');
+      return;
+    }
+    if (!storeId.trim()) {
+      setError('Store ID is required');
+      return;
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return;
+    }
     if (password !== confirmPassword) {
-      alert('Passwords do not match');
+      setError('Passwords do not match');
       return;
     }
 
@@ -40,9 +62,10 @@ export const Signup = () => {
 
     try {
       const payload = {
-        username,
+        username: username.trim(),
+        full_name: fullName.trim(),
         password,
-        store_id: storeId,
+        store_id: storeId.trim(),
       };
 
       const response = await fetch(`${API_URL}/auth/register`, {
@@ -58,7 +81,7 @@ export const Signup = () => {
           .json()
           .catch(() => ({}));
         const message = (errorData as { detail?: string }).detail ?? 'Signup failed';
-        alert(typeof message === 'string' ? message : 'Signup failed');
+        setError(typeof message === 'string' ? message : 'Signup failed');
         return;
       }
 
@@ -69,285 +92,486 @@ export const Signup = () => {
         localStorage.setItem('token', token);
         navigate('/');
       } else {
-        // If backend ever stops returning a token, fall back to login page.
-        alert('Account created. Please log in.');
-        navigate('/login');
+        setError('Account created. Please log in.');
+        setTimeout(() => navigate('/login'), 2000);
       }
     } catch (error) {
       console.error('Signup failed', error);
-      alert('Signup failed. Please try again.');
+      setError('Signup failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <Flex
-      minH="100vh"
-      align="center"
-      justify="center"
-      bgGradient="linear(to-r, purple.600, pink.600)"
-      position="relative"
-      overflow="hidden"
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        position: 'relative',
+        overflow: 'hidden',
+        py: 4,
+      }}
     >
-      {/* Background decoration */}
+      {/* Animated background elements */}
       <Box
-        position="absolute"
-        top="-50%"
-        right="-50%"
-        w="200%"
-        h="200%"
-        bgGradient="radial(circle, rgba(168,85,247,0.1) 0%, transparent 70%)"
-        zIndex={0}
+        sx={{
+          position: 'absolute',
+          top: '-20%',
+          right: '-10%',
+          width: '500px',
+          height: '500px',
+          borderRadius: '50%',
+          background: 'rgba(255, 255, 255, 0.1)',
+          filter: 'blur(80px)',
+          animation: 'float 20s ease-in-out infinite',
+          '@keyframes float': {
+            '0%, 100%': { transform: 'translate(0, 0) rotate(0deg)' },
+            '50%': { transform: 'translate(-50px, -50px) rotate(180deg)' },
+          },
+        }}
+      />
+      <Box
+        sx={{
+          position: 'absolute',
+          bottom: '-20%',
+          left: '-10%',
+          width: '400px',
+          height: '400px',
+          borderRadius: '50%',
+          background: 'rgba(255, 255, 255, 0.08)',
+          filter: 'blur(60px)',
+          animation: 'float 15s ease-in-out infinite reverse',
+        }}
       />
       
-      <Container maxW="container.xl" px={{ base: 4, md: 8 }} position="relative" zIndex={1}>
-        <SimpleGrid columns={{ base: 1, md: 2 }} gap={12} alignItems="center">
+      <Container maxWidth="lg" sx={{ px: { xs: 2, md: 4 }, position: 'relative', zIndex: 1 }}>
+        <Grid container spacing={6} alignItems="center">
           {/* Left: Marketing / Hero */}
-          <VStack align="flex-start" gap={6} color="white" display={{ base: 'none', md: 'flex' }}>
-            <Badge
-              px={3}
-              py={1}
-              borderRadius="full"
-              bg="whiteAlpha.200"
-              fontSize="xs"
-              textTransform="uppercase"
-              letterSpacing="wide"
-            >
-              AI‑powered loss prevention
-            </Badge>
-            <Heading size="2xl" lineHeight="short">
-              Create your SentinelStore account
-            </Heading>
-            <Text fontSize="md" maxW="md" color="whiteAlpha.800">
-              Onboard your store, connect sensors, and let the agentic incident engine
-              watch for risks across all your retail locations.
-            </Text>
-          </VStack>
+          <Grid item xs={12} md={6} sx={{ display: { xs: 'none', md: 'block' } }}>
+            <Fade in timeout={800}>
+              <Stack spacing={4} color="white">
+                <Chip
+                  label="AI‑powered loss prevention"
+                  sx={{
+                    bgcolor: 'rgba(255, 255, 255, 0.25)',
+                    color: 'white',
+                    fontSize: '0.75rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em',
+                    height: '28px',
+                    fontWeight: 600,
+                    backdropFilter: 'blur(10px)',
+                  }}
+                />
+                <Typography 
+                  variant="h1" 
+                  sx={{ 
+                    color: 'white', 
+                    lineHeight: 1.2,
+                    fontWeight: 800,
+                    fontSize: { md: '3.5rem', lg: '4rem' },
+                  }}
+                >
+                  Create your SentinelStore account
+                </Typography>
+                <Typography 
+                  variant="body1" 
+                  sx={{ 
+                    color: 'rgba(255, 255, 255, 0.9)', 
+                    maxWidth: 'md',
+                    fontSize: '1.1rem',
+                    lineHeight: 1.7,
+                  }}
+                >
+                  Onboard your store, connect sensors, and let the agentic incident engine
+                  watch for risks across all your retail locations.
+                </Typography>
+                <Stack spacing={2} sx={{ mt: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box
+                      sx={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: '12px',
+                        bgcolor: 'rgba(255, 255, 255, 0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backdropFilter: 'blur(10px)',
+                      }}
+                    >
+                      <Icon component={FiUserPlus} sx={{ fontSize: 20, color: 'white' }} />
+                    </Box>
+                    <Box>
+                      <Typography fontWeight={600} sx={{ mb: 0.5 }}>Quick Setup</Typography>
+                      <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                        Get started in under 2 minutes
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box
+                      sx={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: '12px',
+                        bgcolor: 'rgba(255, 255, 255, 0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backdropFilter: 'blur(10px)',
+                      }}
+                    >
+                      <Icon component={FiShoppingBag} sx={{ fontSize: 20, color: 'white' }} />
+                    </Box>
+                    <Box>
+                      <Typography fontWeight={600} sx={{ mb: 0.5 }}>Multi-Store Support</Typography>
+                      <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                        Manage multiple locations from one dashboard
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Stack>
+              </Stack>
+            </Fade>
+          </Grid>
 
           {/* Right: Auth card */}
-          <VStack gap={8}>
-            <VStack gap={2}>
-              <Box
-                w={16}
-                h={16}
-                bg="white"
-                borderRadius="full"
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-                boxShadow="xl"
-              >
-                <Icon as={FiUser} color="purple.500" boxSize={8} />
-              </Box>
-              <Heading size="lg" color="white" fontWeight="bold">
-                Get started in minutes
-              </Heading>
-            </VStack>
-
-            <Box
-              w="100%"
-              maxW="420px"
-              p={8}
-              borderRadius="2xl"
-              boxShadow="2xl"
-              bg="white"
-            >
-              <VStack gap={6}>
-                <VStack gap={2} textAlign="center" w="full">
-                  <Heading as="h1" size="lg" color="gray.800">
-                    Create an account
-                  </Heading>
-                  <Text color="gray.600" fontSize="sm">
-                    Set up access for your store's security team.
-                  </Text>
-                </VStack>
-
-                <form onSubmit={handleSubmit} style={{ width: '100%' }}>
-                  <VStack gap={4}>
-                    <Box w="full">
-                      <Text mb={2} fontWeight="medium" color="gray.700" fontSize="sm">
-                        Username
-                      </Text>
-                      <Box position="relative">
-                        <Icon
-                          as={FiUser}
-                          position="absolute"
-                          left={3}
-                          top="50%"
-                          transform="translateY(-50%)"
-                          color="gray.400"
-                          boxSize={4}
-                        />
-                        <Input
-                          type="text"
-                          placeholder="Choose a username"
-                          value={username}
-                          onChange={(e) => setUsername(e.target.value)}
-                          required
-                          pl={10}
-                          h={12}
-                          borderRadius="lg"
-                          borderColor="gray.200"
-                          _hover={{ borderColor: 'purple.300' }}
-                          _focus={{ borderColor: 'purple.500', boxShadow: '0 0 0 1px purple.500' }}
-                        />
+          <Grid item xs={12} md={6}>
+            <Fade in timeout={1000}>
+              <Stack spacing={3} alignItems="center">
+                <Paper
+                  elevation={24}
+                  sx={{
+                    width: '100%',
+                    maxWidth: '480px',
+                    p: { xs: 3, sm: 4 },
+                    borderRadius: 4,
+                    background: 'rgba(255, 255, 255, 0.98)',
+                    backdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                  }}
+                >
+                  <Stack spacing={3}>
+                    <Stack spacing={1} textAlign="center" sx={{ mb: 1 }}>
+                      <Box
+                        sx={{
+                          width: 72,
+                          height: 72,
+                          bgcolor: 'primary.main',
+                          borderRadius: '20px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          mx: 'auto',
+                          mb: 1,
+                          boxShadow: '0 8px 24px rgba(102, 126, 234, 0.4)',
+                        }}
+                      >
+                        <Icon component={FiUserPlus} sx={{ fontSize: 36, color: 'white' }} />
                       </Box>
-                    </Box>
-                  
-                  <Box w="full">
-                    <Text mb={2} fontWeight="medium" color="gray.700" fontSize="sm">
-                      Password
-                    </Text>
-                    <Box position="relative">
-                      <Icon 
-                        as={FiLock} 
-                        position="absolute" 
-                        left={3} 
-                        top="50%" 
-                        transform="translateY(-50%)" 
-                        color="gray.400" 
-                        boxSize={4} 
-                      />
-                      <Input
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="Create a password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        minLength={6}
-                        pl={10}
-                        pr={10}
-                        h={12}
-                        borderRadius="lg"
-                        borderColor="gray.200"
-                        _hover={{ borderColor: 'purple.300' }}
-                        _focus={{ borderColor: 'purple.500', boxShadow: '0 0 0 1px purple.500' }}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        position="absolute"
-                        right={2}
-                        top="50%"
-                        transform="translateY(-50%)"
-                        onClick={() => setShowPassword(!showPassword)}
-                        h={8}
-                        w={8}
-                        p={0}
-                        _hover={{ bg: 'gray.100' }}
+                      <Typography variant="h4" sx={{ color: 'text.primary', fontWeight: 700 }}>
+                        Create Account
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        Fill in your details to get started
+                      </Typography>
+                    </Stack>
+
+                    {error && (
+                      <Alert 
+                        severity="error" 
+                        onClose={() => setError(null)}
+                        sx={{ borderRadius: 2 }}
                       >
-                        <Icon as={showPassword ? FiEyeOff : FiEye} color="gray.400" boxSize={4} />
-                      </Button>
-                    </Box>
-                  </Box>
-                  
-                  <Box w="full">
-                    <Text mb={2} fontWeight="medium" color="gray.700" fontSize="sm">
-                      Confirm Password
-                    </Text>
-                    <Box position="relative">
-                      <Icon 
-                        as={FiLock} 
-                        position="absolute" 
-                        left={3} 
-                        top="50%" 
-                        transform="translateY(-50%)" 
-                        color="gray.400" 
-                        boxSize={4} 
-                      />
-                      <Input
-                        type={showConfirmPassword ? 'text' : 'password'}
-                        placeholder="Confirm your password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        required
-                        minLength={6}
-                        pl={10}
-                        pr={10}
-                        h={12}
-                        borderRadius="lg"
-                        borderColor="gray.200"
-                        _hover={{ borderColor: 'purple.300' }}
-                        _focus={{ borderColor: 'purple.500', boxShadow: '0 0 0 1px purple.500' }}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        position="absolute"
-                        right={2}
-                        top="50%"
-                        transform="translateY(-50%)"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        h={8}
-                        w={8}
-                        p={0}
-                        _hover={{ bg: 'gray.100' }}
-                      >
-                        <Icon as={showConfirmPassword ? FiEyeOff : FiEye} color="gray.400" boxSize={4} />
-                      </Button>
-                    </Box>
-                  </Box>
-                  <Box w="full">
-                    <Text mb={2} fontWeight="medium" color="gray.700" fontSize="sm">
-                      Store ID
-                    </Text>
-                    <Input
-                      type="text"
-                      placeholder="Enter your store ID"
-                      value={storeId}
-                      onChange={(e) => setStoreId(e.target.value)}
-                      required
-                      h={12}
-                      borderRadius="lg"
-                      borderColor="gray.200"
-                      _hover={{ borderColor: 'purple.300' }}
-                      _focus={{ borderColor: 'purple.500', boxShadow: '0 0 0 1px purple.500' }}
-                    />
-                  </Box>
+                        {error}
+                      </Alert>
+                    )}
 
-                    <Button
-                      type="submit"
-                      colorScheme="purple"
-                      width="full"
-                      h={12}
-                      mt={2}
-                      loading={isLoading}
-                      loadingText="Creating account..."
-                      borderRadius="lg"
-                      fontSize="md"
-                      fontWeight="semibold"
-                      bgGradient="linear(to-r, purple.500, pink.500)"
-                      _hover={{
-                        bgGradient: 'linear(to-r, purple.600, pink.600)',
-                        transform: 'translateY(-1px)',
-                      }}
-                      _active={{ transform: 'translateY(0)' }}
-                      transition="all 0.2s"
-                      boxShadow="md"
-                    >
-                      Sign Up
-                    </Button>
-                  </VStack>
-                </form>
+                    <form onSubmit={handleSubmit} style={{ width: '100%' }}>
+                      <Stack spacing={2.5}>
+                        <Box>
+                          <Typography variant="body2" fontWeight={600} sx={{ mb: 1, color: 'text.primary' }}>
+                            Full Name <span style={{ color: '#ef4444' }}>*</span>
+                          </Typography>
+                          <TextField
+                            fullWidth
+                            placeholder="Enter your full name"
+                            value={fullName}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFullName(e.target.value)}
+                            required
+                            size="medium"
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <Icon component={FiUser} sx={{ color: 'text.secondary' }} />
+                                </InputAdornment>
+                              ),
+                            }}
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                height: '50px',
+                                borderRadius: '12px',
+                                bgcolor: 'grey.50',
+                                '&:hover fieldset': {
+                                  borderColor: 'primary.light',
+                                },
+                                '&.Mui-focused': {
+                                  bgcolor: 'white',
+                                  '& fieldset': {
+                                    borderColor: 'primary.main',
+                                    borderWidth: '2px',
+                                  },
+                                },
+                              },
+                            }}
+                          />
+                        </Box>
 
-                <Box w="full" h="1px" bg="gray.100" my={6} />
+                        <Box>
+                          <Typography variant="body2" fontWeight={600} sx={{ mb: 1, color: 'text.primary' }}>
+                            Username <span style={{ color: '#ef4444' }}>*</span>
+                          </Typography>
+                          <TextField
+                            fullWidth
+                            placeholder="Choose a username"
+                            value={username}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
+                            required
+                            size="medium"
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <Icon component={FiUser} sx={{ color: 'text.secondary' }} />
+                                </InputAdornment>
+                              ),
+                            }}
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                height: '50px',
+                                borderRadius: '12px',
+                                bgcolor: 'grey.50',
+                                '&:hover fieldset': {
+                                  borderColor: 'primary.light',
+                                },
+                                '&.Mui-focused': {
+                                  bgcolor: 'white',
+                                  '& fieldset': {
+                                    borderColor: 'primary.main',
+                                    borderWidth: '2px',
+                                  },
+                                },
+                              },
+                            }}
+                          />
+                        </Box>
+                      
+                        <Box>
+                          <Typography variant="body2" fontWeight={600} sx={{ mb: 1, color: 'text.primary' }}>
+                            Store ID <span style={{ color: '#ef4444' }}>*</span>
+                          </Typography>
+                          <TextField
+                            fullWidth
+                            placeholder="Enter your store ID"
+                            value={storeId}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStoreId(e.target.value)}
+                            required
+                            size="medium"
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <Icon component={FiShoppingBag} sx={{ color: 'text.secondary' }} />
+                                </InputAdornment>
+                              ),
+                            }}
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                height: '50px',
+                                borderRadius: '12px',
+                                bgcolor: 'grey.50',
+                                '&:hover fieldset': {
+                                  borderColor: 'primary.light',
+                                },
+                                '&.Mui-focused': {
+                                  bgcolor: 'white',
+                                  '& fieldset': {
+                                    borderColor: 'primary.main',
+                                    borderWidth: '2px',
+                                  },
+                                },
+                              },
+                            }}
+                          />
+                        </Box>
+                      
+                        <Box>
+                          <Typography variant="body2" fontWeight={600} sx={{ mb: 1, color: 'text.primary' }}>
+                            Password <span style={{ color: '#ef4444' }}>*</span>
+                          </Typography>
+                          <TextField
+                            fullWidth
+                            type={showPassword ? 'text' : 'password'}
+                            placeholder="Create a password (min. 6 characters)"
+                            value={password}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                            required
+                            size="medium"
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <Icon component={FiLock} sx={{ color: 'text.secondary' }} />
+                                </InputAdornment>
+                              ),
+                              endAdornment: (
+                                <InputAdornment position="end">
+                                  <IconButton
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    edge="end"
+                                    size="small"
+                                    sx={{ color: 'text.secondary' }}
+                                  >
+                                    <Icon component={showPassword ? FiEyeOff : FiEye} />
+                                  </IconButton>
+                                </InputAdornment>
+                              ),
+                            }}
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                height: '50px',
+                                borderRadius: '12px',
+                                bgcolor: 'grey.50',
+                                '&:hover fieldset': {
+                                  borderColor: 'primary.light',
+                                },
+                                '&.Mui-focused': {
+                                  bgcolor: 'white',
+                                  '& fieldset': {
+                                    borderColor: 'primary.main',
+                                    borderWidth: '2px',
+                                  },
+                                },
+                              },
+                            }}
+                          />
+                        </Box>
+                      
+                        <Box>
+                          <Typography variant="body2" fontWeight={600} sx={{ mb: 1, color: 'text.primary' }}>
+                            Confirm Password <span style={{ color: '#ef4444' }}>*</span>
+                          </Typography>
+                          <TextField
+                            fullWidth
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            placeholder="Confirm your password"
+                            value={confirmPassword}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)}
+                            required
+                            size="medium"
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <Icon component={FiLock} sx={{ color: 'text.secondary' }} />
+                                </InputAdornment>
+                              ),
+                              endAdornment: (
+                                <InputAdornment position="end">
+                                  <IconButton
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    edge="end"
+                                    size="small"
+                                    sx={{ color: 'text.secondary' }}
+                                  >
+                                    <Icon component={showConfirmPassword ? FiEyeOff : FiEye} />
+                                  </IconButton>
+                                </InputAdornment>
+                              ),
+                            }}
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                height: '50px',
+                                borderRadius: '12px',
+                                bgcolor: 'grey.50',
+                                '&:hover fieldset': {
+                                  borderColor: 'primary.light',
+                                },
+                                '&.Mui-focused': {
+                                  bgcolor: 'white',
+                                  '& fieldset': {
+                                    borderColor: 'primary.main',
+                                    borderWidth: '2px',
+                                  },
+                                },
+                              },
+                            }}
+                          />
+                        </Box>
 
-                <HStack gap={1} justify="center">
-                  <Text color="gray.600" fontSize="sm">
-                    Already have an account?
-                  </Text>
-                  <Link to="/login">
-                    <Text color="purple.500" fontWeight="semibold" fontSize="sm">
-                      Sign in
-                    </Text>
-                  </Link>
-                </HStack>
-              </VStack>
-            </Box>
-          </VStack>
-        </SimpleGrid>
+                        <Button
+                          type="submit"
+                          fullWidth
+                          variant="contained"
+                          size="large"
+                          disabled={isLoading}
+                          sx={{
+                            height: '52px',
+                            mt: 2,
+                            borderRadius: '12px',
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            fontSize: '1rem',
+                            fontWeight: 600,
+                            textTransform: 'none',
+                            boxShadow: '0 8px 24px rgba(102, 126, 234, 0.4)',
+                            '&:hover': {
+                              background: 'linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%)',
+                              transform: 'translateY(-2px)',
+                              boxShadow: '0 12px 32px rgba(102, 126, 234, 0.5)',
+                            },
+                            '&:active': {
+                              transform: 'translateY(0)',
+                            },
+                            '&:disabled': {
+                              background: 'grey.300',
+                            },
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                          }}
+                        >
+                          {isLoading ? 'Creating account...' : 'Create Account'}
+                        </Button>
+                      </Stack>
+                    </form>
+
+                    <Box sx={{ width: '100%', height: '1px', bgcolor: 'grey.200', my: 2 }} />
+
+                    <Stack direction="row" spacing={0.5} justifyContent="center">
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        Already have an account?
+                      </Typography>
+                      <Link to="/login" style={{ textDecoration: 'none' }}>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: 'primary.main', 
+                            fontWeight: 600,
+                            '&:hover': {
+                              textDecoration: 'underline',
+                            },
+                          }}
+                        >
+                          Sign in
+                        </Typography>
+                      </Link>
+                    </Stack>
+                  </Stack>
+                </Paper>
+              </Stack>
+            </Fade>
+          </Grid>
+        </Grid>
       </Container>
-    </Flex>
+    </Box>
   );
 };

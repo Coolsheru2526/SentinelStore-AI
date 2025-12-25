@@ -1,4 +1,4 @@
-import { Box } from '@chakra-ui/react';
+import { Box, Paper } from '@mui/material';
 import type { ReactNode } from 'react';
 import { Sidebar } from '../Sidebar';
 import { Navbar } from '../Navbar';
@@ -9,19 +9,21 @@ type LayoutProps = {
 
 export const Layout = ({ children }: LayoutProps) => {
   return (
-    <Box minH="100vh" bg="gray.50">
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <Sidebar />
-      <Box ml={{ base: 0, md: '240px' }} p="4">
+      <Box sx={{ ml: { xs: 0, md: '240px' }, p: 2 }}>
         <Navbar />
-        <Box
-          bg="white"
-          borderRadius="lg"
-          p={6}
-          boxShadow="sm"
-          minH="calc(100vh - 120px)"
+        <Paper
+          elevation={1}
+          sx={{
+            bgcolor: 'background.paper',
+            borderRadius: 2,
+            p: 3,
+            minHeight: 'calc(100vh - 120px)',
+          }}
         >
           {children}
-        </Box>
+        </Paper>
       </Box>
     </Box>
   );

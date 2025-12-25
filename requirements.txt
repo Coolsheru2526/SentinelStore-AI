@@ -51,6 +51,9 @@ twilio
 # SendGrid for Email (Twilio-owned)
 sendgrid
 
+# Google AI (Gemini)
+google-genai
+
 # Testing
 # pytest
 # pytest-asyncio

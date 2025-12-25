@@ -1,6 +1,7 @@
-import { Box, VStack, Icon, Text, HStack, LinkBox } from '@chakra-ui/react';
+import { Box, Stack, Typography, Paper } from '@mui/material';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { FiHome, FiUsers, FiSettings, FiPieChart, FiShoppingBag, FiAlertCircle } from 'react-icons/fi';
+import { Icon } from '@mui/material';
 
 interface NavItemProps {
   icon: React.ElementType;
@@ -10,35 +11,33 @@ interface NavItemProps {
 }
 
 const NavItem = ({ icon, children, to, isActive }: NavItemProps) => {
-  const activeBg = 'brand.50';
-  const activeColor = 'brand.600';
-  const hoverBg = 'gray.100';
-  const color = 'gray.600';
-
   return (
-    <LinkBox as="div" w="full">
-      <RouterLink to={to} style={{ textDecoration: 'none' }}>
-        <HStack
-          px={4}
-          py={3}
-          borderRadius="lg"
-          bg={isActive ? activeBg : 'transparent'}
-          color={isActive ? activeColor : color}
-          _hover={!isActive ? { bg: hoverBg } : {}}
-          transition="all 0.2s"
-        >
-          <Icon as={icon} boxSize={5} />
-          <Text fontWeight={isActive ? 'semibold' : 'normal'}>{children}</Text>
-        </HStack>
-      </RouterLink>
-    </LinkBox>
+    <RouterLink to={to} style={{ textDecoration: 'none' }}>
+      <Paper
+        elevation={0}
+        sx={{
+          px: 2,
+          py: 1.5,
+          borderRadius: 2,
+          bgcolor: isActive ? 'primary.50' : 'transparent',
+          color: isActive ? 'primary.main' : 'text.secondary',
+          '&:hover': {
+            bgcolor: isActive ? 'primary.50' : 'grey.100',
+          },
+          transition: 'all 0.2s',
+        }}
+      >
+        <Stack direction="row" spacing={2} alignItems="center">
+          <Icon component={icon} sx={{ fontSize: 20 }} />
+          <Typography component="div" fontWeight={isActive ? 600 : 400}>{children}</Typography>
+        </Stack>
+      </Paper>
+    </RouterLink>
   );
 };
 
 export const Sidebar = () => {
   const location = useLocation();
-  const bg = 'white';
-  const borderColor = 'gray.200';
 
   const navItems = [
     { icon: FiHome, label: 'Dashboard', path: '/' },
@@ -51,26 +50,30 @@ export const Sidebar = () => {
 
   return (
     <Box
-      as="nav"
-      position="fixed"
-      left={0}
-      top={0}
-      h="100vh"
-      w={{ base: '60px', md: '240px' }}
-      bg={bg}
-      borderRightWidth="1px"
-      borderColor={borderColor}
-      py={4}
-      transition="all 0.2s"
-      _hover={{ width: { base: '240px', md: '240px' } }}
-      overflowX="hidden"
-      zIndex={10}
+      component="nav"
+      sx={{
+        position: 'fixed',
+        left: 0,
+        top: 0,
+        height: '100vh',
+        width: { xs: '60px', md: '240px' },
+        bgcolor: 'background.paper',
+        borderRight: '1px solid',
+        borderColor: 'grey.200',
+        py: 2,
+        transition: 'all 0.2s',
+        overflowX: 'hidden',
+        zIndex: 10,
+        '&:hover': {
+          width: { xs: '240px', md: '240px' },
+        },
+      }}
     >
-      <VStack align="stretch" style={{ gap: '0.25rem' }} px={2}>
-        <Box px={4} py={2} mb={4} display={{ base: 'none', md: 'block' }}>
-          <Text fontSize="xl" fontWeight="bold" color="brand.500">
+      <Stack spacing={0.25} sx={{ px: 1 }}>
+        <Box sx={{ px: 2, py: 1, mb: 2, display: { xs: 'none', md: 'block' } }}>
+          <Typography variant="h6" fontWeight="bold" sx={{ color: 'primary.main' }}>
             SentinelStore
-          </Text>
+          </Typography>
         </Box>
         
         {navItems.map((item) => (
@@ -80,10 +83,10 @@ export const Sidebar = () => {
             to={item.path}
             isActive={location.pathname === item.path}
           >
-            <Box display={{ base: 'none', md: 'block' }}>{item.label}</Box>
+            <Box sx={{ display: { xs: 'none', md: 'block' } }}>{item.label}</Box>
           </NavItem>
         ))}
-      </VStack>
+      </Stack>
     </Box>
   );
 };

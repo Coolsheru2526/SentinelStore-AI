@@ -1,18 +1,16 @@
 import { useState } from 'react';
-import { 
-  Box, 
-  Button, 
-  VStack, 
-  Heading, 
-  Text,
-  Icon,
-  Flex,
-  Image,
-  Progress,
-  HStack,
-  Badge
-} from '@chakra-ui/react';
+import {
+  Box,
+  Button,
+  Stack,
+  Typography,
+  Paper,
+  LinearProgress,
+  IconButton,
+  Chip,
+} from '@mui/material';
 import { FiUpload, FiFile, FiX, FiCheck } from 'react-icons/fi';
+import { Icon } from '@mui/material';
 
 type FileType = 'image' | 'video' | 'audio' | null;
 
@@ -105,7 +103,6 @@ export const FileUpload = () => {
     setFiles(prev => {
       const newFiles = [...prev];
       const removed = newFiles.splice(index, 1);
-      // Revoke the object URL to avoid memory leaks
       if (removed[0].preview) {
         URL.revokeObjectURL(removed[0].preview);
       }
@@ -117,10 +114,7 @@ export const FileUpload = () => {
     setIsUploading(true);
     
     try {
-      // TODO: Replace with actual API call
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Clear files after successful upload
       setFiles([]);
     } catch (error) {
       console.error('Upload failed', error);
@@ -144,38 +138,40 @@ export const FileUpload = () => {
 
   return (
     <Box>
-      <Heading size="lg" mb={6}>
+      <Typography variant="h5" sx={{ mb: 3 }}>
         Upload Media for Analysis
-      </Heading>
+      </Typography>
       
-      <Box
-        border="2px dashed"
-        borderColor={isDragging ? 'blue.400' : 'gray.300'}
-        borderRadius="lg"
-        p={8}
-        textAlign="center"
+      <Paper
+        elevation={0}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        bg={isDragging ? 'blue.50' : 'gray.50'}
-        transition="all 0.2s"
-        mb={6}
+        sx={{
+          border: '2px dashed',
+          borderColor: isDragging ? 'primary.main' : 'grey.300',
+          borderRadius: 2,
+          p: 4,
+          textAlign: 'center',
+          bgcolor: isDragging ? 'primary.50' : 'grey.50',
+          transition: 'all 0.2s',
+          mb: 3,
+        }}
       >
-        <VStack gap={4}>
-          <Icon as={FiUpload} boxSize={8} color="gray.400" />
+        <Stack spacing={2} alignItems="center">
+          <Icon component={FiUpload} sx={{ fontSize: 32, color: 'text.secondary' }} />
           <Box>
-            <Text fontWeight="medium">Drag & drop files here, or click to select</Text>
-            <Text fontSize="sm" color="gray.500" mt={1}>
+            <Typography fontWeight={500}>Drag & drop files here, or click to select</Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
               Supports images, videos, and audio files
-            </Text>
+            </Typography>
           </Box>
           <Button
-            as="label"
-            colorScheme="blue"
-            variant="outline"
-            cursor="pointer"
+            component="label"
+            variant="outlined"
+            color="primary"
+            startIcon={<Icon component={FiFile} />}
           >
-            <Icon as={FiFile} mr={2} />
             Choose Files
             <input
               type="file"
@@ -185,97 +181,107 @@ export const FileUpload = () => {
               accept="image/*,video/*,audio/*"
             />
           </Button>
-        </VStack>
-      </Box>
+        </Stack>
+      </Paper>
 
       {files.length > 0 && (
         <Box>
-          <HStack justify="space-between" mb={4}>
-            <Text fontWeight="medium">Files to upload ({files.length})</Text>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+            <Typography fontWeight={500}>Files to upload ({files.length})</Typography>
             <Button
-              colorScheme="blue"
+              variant="contained"
+              color="primary"
               onClick={handleSubmit}
-              loading={isUploading}
-              loadingText="Uploading..."
-              size="sm"
+              disabled={isUploading}
+              size="small"
             >
-              Upload All
+              {isUploading ? 'Uploading...' : 'Upload All'}
             </Button>
-          </HStack>
+          </Stack>
 
-          <VStack gap={4} align="stretch">
+          <Stack spacing={2}>
             {files.map((file, index) => (
-              <Box
+              <Paper
                 key={index}
-                borderWidth="1px"
-                borderRadius="md"
-                p={4}
-                position="relative"
-                bg="white"
+                elevation={0}
+                sx={{
+                  border: '1px solid',
+                  borderColor: 'grey.200',
+                  borderRadius: 1,
+                  p: 2,
+                  position: 'relative',
+                  bgcolor: 'background.paper',
+                }}
               >
-                <Flex align="center" justify="space-between">
-                  <HStack gap={4} flex={1} minW={0}>
-                    <Box fontSize="2xl">
-                      {file.type === 'image' && file.preview ? (
-                        <Image
-                          src={file.preview}
-                          alt={file.file.name}
-                          boxSize="40px"
-                          objectFit="cover"
-                          borderRadius="md"
-                        />
-                      ) : (
-                        <span>{getFileIcon(file.type)}</span>
-                      )}
-                    </Box>
-                    <Box minW={0} flex={1}>
-                      <Text
-                        truncate
-                        fontWeight="medium"
-                        title={file.file.name}
-                      >
-                        {file.file.name}
-                      </Text>
-                      <HStack gap={2} mt={1}>
-                        <Badge colorScheme={file.type === 'image' ? 'green' : file.type === 'video' ? 'red' : 'blue'}>
-                          {file.type || 'file'}
-                        </Badge>
-                        <Text fontSize="sm" color="gray.500">
-                          {(file.file.size / 1024 / 1024).toFixed(2)} MB
-                        </Text>
-                      </HStack>
-                    </Box>
-                    {file.status === 'completed' ? (
-                      <Icon as={FiCheck} color="green.500" boxSize={5} />
+                <Stack direction="row" alignItems="center" spacing={2} sx={{ flex: 1, minWidth: 0 }}>
+                  <Box sx={{ fontSize: '2rem' }}>
+                    {file.type === 'image' && file.preview ? (
+                      <Box
+                        component="img"
+                        src={file.preview}
+                        alt={file.file.name}
+                        sx={{
+                          width: 40,
+                          height: 40,
+                          objectFit: 'cover',
+                          borderRadius: 1,
+                        }}
+                      />
                     ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeFile(index)}
-                        disabled={isUploading}
-                      >
-                        <Icon as={FiX} />
-                      </Button>
+                      <span>{getFileIcon(file.type)}</span>
                     )}
-                  </HStack>
-                </Flex>
+                  </Box>
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Typography
+                      variant="body2"
+                      fontWeight={500}
+                      noWrap
+                      title={file.file.name}
+                    >
+                      {file.file.name}
+                    </Typography>
+                    <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+                      <Chip
+                        label={file.type || 'file'}
+                        color={
+                          file.type === 'image' ? 'success' : file.type === 'video' ? 'error' : 'primary'
+                        }
+                        size="small"
+                      />
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                        {(file.file.size / 1024 / 1024).toFixed(2)} MB
+                      </Typography>
+                    </Stack>
+                  </Box>
+                  {file.status === 'completed' ? (
+                    <Icon component={FiCheck} sx={{ color: 'success.main', fontSize: 20 }} />
+                  ) : (
+                    <IconButton
+                      size="small"
+                      onClick={() => removeFile(index)}
+                      disabled={isUploading}
+                    >
+                      <Icon component={FiX} />
+                    </IconButton>
+                  )}
+                </Stack>
                 
                 {file.status === 'uploading' && (
-                  <Box mt={2}>
-                    <Progress.Root
+                  <Box sx={{ mt: 1 }}>
+                    <LinearProgress
+                      variant="determinate"
                       value={file.progress}
-                      size="sm"
-                      colorScheme="blue"
-                      borderRadius="full"
+                      size="small"
+                      sx={{ borderRadius: '9999px' }}
                     />
-                    <Text fontSize="xs" color="gray.500" mt={1} textAlign="right">
+                    <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5, textAlign: 'right', display: 'block' }}>
                       {Math.round(file.progress)}%
-                    </Text>
+                    </Typography>
                   </Box>
                 )}
-              </Box>
+              </Paper>
             ))}
-          </VStack>
+          </Stack>
         </Box>
       )}
     </Box>

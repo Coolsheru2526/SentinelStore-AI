@@ -373,5 +373,124 @@ async def get_incident(incident_id: str, current_user: User = Depends(get_curren
         "plan": incident_doc.get("plan"),
         "execution_results": incident_doc.get("execution_results"),
         "explanation": incident_doc.get("explanation"),
+        "reflection": incident_doc.get("reflection"),
         "state": sanitized_state,
     }
+
+
+@app.post("/incident/{incident_id}/summarize-report", tags=["Incidents"])
+async def summarize_incident_report(incident_id: str, current_user: User = Depends(get_current_user)):
+    """
+    Generate a summarized, audit-friendly report from the incident explanation.
+    Uses Gemini 3 Pro Preview to create a clean, professional report suitable for PDF/DOCX export.
+    """
+    try:
+        from services.gemini_service import summarize_incident_report
+        
+        # Fetch incident
+        incident_doc = await incidents_collection.find_one({"_id": incident_id})
+        if not incident_doc:
+            raise HTTPException(status_code=404, detail="Incident not found")
+        
+        if incident_doc["store_id"] != current_user.store_id:
+            raise HTTPException(status_code=403, detail="Access denied: Incident store does not match user store")
+        
+        # Get explanation text
+        explanation = incident_doc.get("explanation") or incident_doc.get("state", {}).get("explanation")
+        if not explanation:
+            raise HTTPException(status_code=400, detail="No explanation found for this incident")
+        
+        # Extract metadata
+        state = incident_doc.get("state", {})
+        incident_id_val = incident_doc.get("_id", "")
+        store_id_val = incident_doc.get("store_id", "")
+        incident_type_val = incident_doc.get("incident_type") or state.get("incident_type", "")
+        severity_val = incident_doc.get("severity") or state.get("severity")
+        risk_score_val = incident_doc.get("risk_score") or state.get("risk_score")
+        confidence_val = state.get("confidence", 0.0)
+        
+        # Call Gemini service to summarize
+        logger.info(f"[INCIDENT-{incident_id}] Generating summarized report via Gemini")
+        
+        summarized_report = summarize_incident_report(
+            incident_explanation=explanation,
+            incident_id=incident_id_val,
+            store_id=store_id_val,
+            incident_type=incident_type_val,
+            severity=severity_val,
+            risk_score=risk_score_val,
+            confidence=confidence_val
+        )
+        
+        logger.info(f"[INCIDENT-{incident_id}] Report summarization completed successfully")
+        
+        return summarized_report
+        
+    except ImportError as e:
+        logger.error(f"Gemini service not available: {str(e)}")
+        raise HTTPException(
+            status_code=503,
+            detail="Report summarization service not available. Please ensure google-generativeai is installed and GEMINI_API_KEY is configured."
+        )
+    except RuntimeError as e:
+        logger.error(f"Gemini service error: {str(e)}")
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error summarizing report: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to summarize report: {str(e)}")
+
+
+@app.post("/incident/{incident_id}/summarize-plan", tags=["Incidents"])
+async def summarize_response_plan(incident_id: str, current_user: User = Depends(get_current_user)):
+    """
+    Generate a summarized, executive-friendly response plan from the incident plan.
+    Uses Gemini to create a clean, professional plan suitable for PDF/DOCX export.
+    """
+    try:
+        from services.gemini_service import summarize_response_plan
+        
+        # Fetch incident
+        incident_doc = await incidents_collection.find_one({"_id": incident_id})
+        if not incident_doc:
+            raise HTTPException(status_code=404, detail="Incident not found")
+        
+        if incident_doc["store_id"] != current_user.store_id:
+            raise HTTPException(status_code=403, detail="Access denied: Incident store does not match user store")
+        
+        # Get plan
+        plan = incident_doc.get("plan") or incident_doc.get("state", {}).get("plan")
+        if not plan:
+            raise HTTPException(status_code=400, detail="No response plan found for this incident")
+        
+        # Extract metadata
+        state = incident_doc.get("state", {})
+        incident_id_val = incident_doc.get("_id", "")
+        incident_type_val = incident_doc.get("incident_type") or state.get("incident_type", "")
+        severity_val = incident_doc.get("severity") or state.get("severity")
+        
+        # Call Gemini service to summarize
+        logger.info(f"[INCIDENT-{incident_id}] Generating summarized response plan via Gemini")
+        
+        summarized_plan = summarize_response_plan(
+            response_plan=plan,
+            incident_id=incident_id_val,
+            incident_type=incident_type_val,
+            severity=severity_val
+        )
+        
+        logger.info(f"[INCIDENT-{incident_id}] Response plan summarization completed successfully")
+        
+        return summarized_plan
+        
+    except ImportError as e:
+        logger.error(f"Gemini service not available: {str(e)}")
+        raise HTTPException(
+            status_code=503,
+            detail="Response plan summarization service not available. Please ensure google-genai is installed and GEMINI_API_KEY is configured."
+        )
+    except RuntimeError as e:
+        logger.error(f"Gemini service error: {str(e)}")
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error summarizing response plan: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to summarize response plan: {str(e)}")

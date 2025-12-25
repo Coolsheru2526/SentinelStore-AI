@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Flex, IconButton, Text, Button } from '@chakra-ui/react';
+import { Box, Stack, IconButton, Typography, Button, Paper } from '@mui/material';
 import { FiBell, FiUser } from 'react-icons/fi';
+import { Icon } from '@mui/material';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
 
@@ -49,44 +50,45 @@ export const Navbar = () => {
   };
 
   return (
-    <Box
-      bg="white"
-      px={4}
-      py={3}
-      mb={4}
-      borderRadius="lg"
-      boxShadow="sm"
-      borderWidth="1px"
-      borderColor="gray.200"
+    <Paper
+      elevation={1}
+      sx={{
+        px: 2,
+        py: 1.5,
+        mb: 2,
+        borderRadius: 2,
+        border: '1px solid',
+        borderColor: 'grey.200',
+      }}
     >
-      <Flex alignItems="center" justifyContent="space-between">
-        <Text fontSize="xl" fontWeight="bold" color="brand.500">
+      <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Typography variant="h6" fontWeight="bold" sx={{ color: 'primary.main' }}>
           SentinelStore AI
-        </Text>
+        </Typography>
 
-        <Flex alignItems="center">
+        <Stack direction="row" alignItems="center" spacing={1}>
           {user && (
-            <Box textAlign="right" mr={4}>
-              <Text fontSize="sm" fontWeight="medium">
+            <Box sx={{ textAlign: 'right', mr: 2 }}>
+              <Typography variant="body2" fontWeight={500}>
                 {user.username}
-              </Text>
-              <Text fontSize="xs" color="gray.500">
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                 Store: {user.store_id}
-              </Text>
+              </Typography>
             </Box>
           )}
 
-          <IconButton aria-label="Notifications" variant="ghost" mr={2}>
-            <FiBell />
+          <IconButton size="small">
+            <Icon component={FiBell} />
           </IconButton>
-          <IconButton aria-label="User profile" variant="ghost" mr={2}>
-            <FiUser />
+          <IconButton size="small">
+            <Icon component={FiUser} />
           </IconButton>
-          <Button size="sm" variant="outline" colorScheme="red" onClick={handleLogout}>
+          <Button size="small" variant="outlined" color="error" onClick={handleLogout}>
             Logout
           </Button>
-        </Flex>
-      </Flex>
-    </Box>
+        </Stack>
+      </Stack>
+    </Paper>
   );
 };
