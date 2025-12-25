@@ -79,4 +79,9 @@ temp/
 *.key
 *.crt
 
-app/chroma_db/
+app/chroma_db
+
+AZURE_SERVICES_SETUP.md
+TESTING_GUIDE.md
+TWILIO_SETUP.md
+tests
