@@ -87,3 +87,15 @@ app/chroma_db/
 **/chroma_db/
 *.sqlite3
 *.bin
+
+# =========================
+# Project docs (local only)
+# =========================
+AZURE_SERVICES_SETUP.md
+TESTING_GUIDE.md
+TWILIO_SETUP.md
+
+# =========================
+# Tests (if not meant for repo)
+# =========================
+tests/
