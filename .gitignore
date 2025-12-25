@@ -79,4 +79,11 @@ temp/
 *.key
 *.crt
 
+# =========================
+# Vector DB / Chroma
+# =========================
+chroma_db/
 app/chroma_db/
+**/chroma_db/
+*.sqlite3
+*.bin
