@@ -30,11 +30,13 @@ class RAGEngine:
         Add a document to the underlying vector store.
         """
         try:
+            # Filter metadata to remove None values and ensure ChromaDB-compatible types
+            filtered_metadata = {k: v for k, v in metadata.items() if v is not None}
             embedding = embed_text(document)
             self.vectorstore.add(
                 embedding=embedding,
                 document=document,
-                metadata=metadata
+                metadata=filtered_metadata
             )
             logger.info("[RAG] Document added to vector store")
         except Exception as e:

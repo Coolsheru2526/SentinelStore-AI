@@ -3,6 +3,7 @@ from langgraph.graph import StateGraph
 from state import IncidentState
 from agents.vision import vision_react_node
 from agents.speech import speech_react_node
+from agents.video import video_react_node
 from agents.memory_retrieval import memory_retrieval_node
 from agents.fusion import fusion_understanding_node
 from agents.risk import risk_node
@@ -25,6 +26,7 @@ g = StateGraph(IncidentState)
 g.add_node("memory", memory_retrieval_node)
 g.add_node("vision_agent",vision_react_node)
 g.add_node("speech_agent",speech_react_node)
+g.add_node("video_agent",video_react_node)
 g.add_node("fusion", fusion_understanding_node)
 g.add_node("risk", risk_node)
 g.add_node("human", human_review_node)
@@ -42,7 +44,8 @@ g.add_node("learn", learning_node)
 g.set_entry_point("memory")
 g.add_edge("memory", "vision_agent")
 g.add_edge("vision_agent","speech_agent")
-g.add_edge("speech_agent","fusion")
+g.add_edge("speech_agent","video_agent")
+g.add_edge("video_agent","fusion")
 g.add_edge("fusion", "risk")
 g.add_conditional_edges("risk", lambda s: "human" if s["requires_human"] else "planning")
 g.add_edge("human", "planning")
