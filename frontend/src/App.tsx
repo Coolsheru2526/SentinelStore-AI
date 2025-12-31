@@ -10,6 +10,8 @@ import { Dashboard } from './pages/Dashboard';
 import { FileUpload } from './pages/FileUpload';
 import { IncidentDetail } from './pages/IncidentDetail';
 import { Layout } from './components/Layout';
+import { AuthProvider } from './contexts/AuthContext';
+import Chat from './components/Chat';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -62,7 +64,16 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
-        
+        <Route
+          path="/chat"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Chat />
+              </Layout>
+            </ProtectedRoute>
+          }
+        /> 
         {/* Redirect to login for any other route */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -75,9 +86,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
+        <AuthProvider>
         <Router>
           <AppContent />
         </Router>
+        </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

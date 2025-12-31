@@ -1,72 +1,41 @@
-import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Stack, IconButton, Typography, Button, Paper } from '@mui/material';
+import { Box, Stack, Paper, Typography, IconButton, Button, Badge } from '@mui/material';
 import { FiBell, FiUser } from 'react-icons/fi';
-import { Icon } from '@mui/material';
-
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
-
-type CurrentUser = {
-  username: string;
-  store_id: string;
-  role?: string;
-};
+import ChatIcon from '@mui/icons-material/Chat';
+import { useAuth } from '../../contexts/AuthContext';
+import { useChat } from '../Chat/ChatProvider';
 
 export const Navbar = () => {
-  const [user, setUser] = useState<CurrentUser | null>(null);
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    const fetchUser = async () => {
-      try {
-        const res = await fetch(`${API_URL}/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!res.ok) return;
-
-        const data = await res.json();
-        setUser({
-          username: data.username,
-          store_id: data.store_id,
-          role: data.role,
-        });
-      } catch (error) {
-        console.error('Failed to fetch current user', error);
-      }
-    };
-
-    void fetchUser();
-  }, []);
-
+  const { rooms } = useChat();
+  const unreadCount = rooms.reduce((total, room) => total + (room.unread_count || 0), 0);
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    logout();
     navigate('/login');
   };
 
   return (
-    <Paper
-      elevation={1}
-      sx={{
-        px: 2,
-        py: 1.5,
-        mb: 2,
-        borderRadius: 2,
-        border: '1px solid',
-        borderColor: 'grey.200',
+    <Paper 
+      elevation={0} 
+      sx={{ 
+        p: 2, 
+        borderRadius: 0,
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+        bgcolor: 'background.paper'
       }}
     >
       <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Typography variant="h6" fontWeight="bold" sx={{ color: 'primary.main' }}>
-          SentinelStore AI
-        </Typography>
+        {/* Left side - Logo/Brand */}
+        <Box>
+          <Typography variant="h6" fontWeight="bold">
+            SentinelStore
+          </Typography>
+        </Box>
 
-        <Stack direction="row" alignItems="center" spacing={1}>
+        {/* Right side - User info and actions */}
+        <Stack direction="row" spacing={1} alignItems="center">
           {user && (
             <Box sx={{ textAlign: 'right', mr: 2 }}>
               <Typography variant="body2" fontWeight={500}>
@@ -78,13 +47,38 @@ export const Navbar = () => {
             </Box>
           )}
 
-          <IconButton size="small">
-            <Icon component={FiBell} />
+          {/* Chat Button */}
+          <IconButton 
+            size="small" 
+            onClick={() => navigate('/chat')}
+            aria-label="Chat"
+          >
+            <Badge 
+              badgeContent={unreadCount} 
+              color="error" 
+              max={9}
+            >
+              <ChatIcon fontSize="small" />
+            </Badge>
           </IconButton>
-          <IconButton size="small">
-            <Icon component={FiUser} />
+
+          <IconButton size="small" aria-label="Notifications">
+            <Badge badgeContent={4} color="error" max={9}>
+              <FiBell />
+            </Badge>
           </IconButton>
-          <Button size="small" variant="outlined" color="error" onClick={handleLogout}>
+          
+          <IconButton size="small" aria-label="Profile">
+            <FiUser />
+          </IconButton>
+          
+          <Button 
+            size="small" 
+            variant="outlined" 
+            color="error" 
+            onClick={handleLogout}
+            sx={{ ml: 1 }}
+          >
             Logout
           </Button>
         </Stack>
