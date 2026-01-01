@@ -176,7 +176,6 @@ else:
     decision = st.selectbox(
         "Human Decision",
         [
-            "approve_plan",
             "force_escalation",
             "abort"
         ]

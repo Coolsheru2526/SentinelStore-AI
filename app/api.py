@@ -3,9 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uuid
 import logging
+from fastapi import UploadFile, File, HTTPException
+import os
+from rag.vectorstore import VectorStore
+from rag.rag_engine import RAGEngine
 from langchain_openai import AzureChatOpenAI
-import base64
-from pydantic import ValidationError
 from schemas import IncidentCreateRequest, IncidentCreateResponse, HumanDecisionRequest
 from graph import incident_graph
 from openai import AzureOpenAI
@@ -45,9 +47,6 @@ llm = AzureChatOpenAI(
 import os
 import json as _json
 
-vector_store = load_store_policy("rag/policy.txt")
-rag_engine = RAGEngine(vector_store)
-logger.info(f"RAG Engine initialized with {vector_store.collection.count()} policy documents")
 
 app = FastAPI()
 logger.info("FastAPI application initialized")
@@ -66,8 +65,8 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
-
 app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
 
 def sanitize_state_for_json(state: dict) -> dict:
@@ -217,6 +216,7 @@ async def create_incident(payload: IncidentCreateRequest, current_user: User = D
         "plan": None,
         "execution_actions": None,
         "execution_results": {},
+        "execution_blocked": False,
         
         # Lifecycle
         "resolved": False,
@@ -494,3 +494,60 @@ async def summarize_response_plan(incident_id: str, current_user: User = Depends
     except Exception as e:
         logger.error(f"Error summarizing response plan: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to summarize response plan: {str(e)}")
+
+@app.post("/stores/{store_id}/policy", tags=["Store Management"])
+async def upload_store_policy(
+    store_id: str,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload or update store policy document"""
+    if current_user.store_id != store_id:
+        raise HTTPException(status_code=403, detail="Not authorized to update this store's policy")
+    
+    try:
+        content = await file.read()
+        policy_text = content.decode('utf-8')
+        
+        
+        vector_store = VectorStore()
+        rag_engine = RAGEngine(vector_store)
+        # First delete existing policies for this store
+        rag_engine.delete_store_policies(store_id)
+        
+        # Add the new policy
+        success = rag_engine.add_document(
+            store_id=store_id,
+            policy_text=policy_text,
+            metadata={
+                "filename": file.filename,
+                "content_type": file.content_type,
+                "uploaded_by": current_user.username
+            }
+        )
+        collection = vector_store.get_collection(store_id)
+        count = collection.count()
+        logger.info(f"RAG Engine initialized with {count} policy documents for store {store_id}")
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update policy")
+            
+        return {"status": "success", "message": "Policy updated successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+@app.get("/stores/{store_id}/policy/search", tags=["Store Management"])
+async def search_policy(
+    store_id: str,
+    query: str,
+    k: int = 5,
+    current_user: User = Depends(get_current_user)
+):
+    """Search within a store's policy documents"""
+    if current_user.store_id != store_id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this store's policy")
+    
+    try:
+        results = rag_engine.query(store_id=store_id, query_text=query, top_k=k)
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

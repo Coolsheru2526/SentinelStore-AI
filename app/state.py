@@ -36,6 +36,7 @@ class IncidentState(TypedDict):
     plan: Optional[List[str]]
     execution_actions: Optional[Dict]
     execution_results: Dict
+    execution_blocked: bool
 
     # Lifecycle
     resolved: bool

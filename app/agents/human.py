@@ -5,23 +5,23 @@ logger = get_logger(__name__)
 
 def human_review_node(state):
     incident_id = state.get("incident_id", "unknown")
-    logger.info(f"[INCIDENT-{incident_id}] [HUMAN] Starting human review node")
-    
-    if not state.get("requires_human", False):
-        logger.debug(f"[INCIDENT-{incident_id}] [HUMAN] Human review not required, skipping")
+    logger.info(f"[INCIDENT-{incident_id}] [HUMAN] Review node")
+
+    if not state.get("requires_human"):
         return state
 
-    human_decision = state.get("human_decision")
-    if human_decision is None:
-        logger.info(f"[INCIDENT-{incident_id}] [HUMAN] Waiting for human decision...")
-        return state
+    if state.get("human_decision") is None:
+        logger.info(f"[INCIDENT-{incident_id}] [HUMAN] Awaiting human input")
+        state["execution_blocked"] = True
+        return state  # STOP HERE
 
-    logger.info(f"[INCIDENT-{incident_id}] [HUMAN] Human decision received: {human_decision}")
-    
-    if human_decision == "force_escalation":
-        logger.warning(f"[INCIDENT-{incident_id}] [HUMAN] Force escalation requested - Setting severity to 5")
-        state["severity"] = 5
+    logger.info(f"[INCIDENT-{incident_id}] [HUMAN] Decision: {state['human_decision']}")
+
+    if state["human_decision"] == "abort":
+        state["resolved"] = True
+        state["execution_blocked"] = True
+        return state
 
     state["requires_human"] = False
-    logger.info(f"[INCIDENT-{incident_id}] [HUMAN] Human review completed")
+    state["execution_blocked"] = False
     return state

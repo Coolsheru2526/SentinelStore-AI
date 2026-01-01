@@ -48,14 +48,18 @@ g.add_edge("speech_agent","video_agent")
 g.add_edge("video_agent","fusion")
 g.add_edge("fusion", "risk")
 g.add_conditional_edges("risk", lambda s: "human" if s["requires_human"] else "planning")
-g.add_edge("human", "planning")
+g.add_conditional_edges(
+    "human",
+    lambda s: "planning" if not s.get("execution_blocked", False) else None
+)
+
 g.add_edge("planning", "respond")
 g.add_edge("respond", "voice")
 g.add_edge("voice", "email")
 g.add_edge("email", "call")
 g.add_edge("call", "escalate")
 g.add_edge("escalate", "monitor")
-# g.add_conditional_edges("monitor", lambda s: "planning" if not s["resolved"] else "explain")
+g.add_conditional_edges("monitor", lambda s: "planning" if not s["resolved"] else "explain")
 g.add_edge("monitor","explain")
 g.add_edge("explain", "self_reflect")
 g.add_edge("self_reflect", "learn")
