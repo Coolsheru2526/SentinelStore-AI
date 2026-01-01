@@ -1,80 +1,116 @@
-# Retail Autonomous Incident Response System
+# SentinelStore-AI
 
 An intelligent, multi-agent AI system built with LangGraph that autonomously detects, assesses, and responds to retail incidents using multimodal inputs (vision + audio), RAG-enhanced policy retrieval, and automated communication channels.
 
 ## 🎯 Overview
 
-This system combines **Azure OpenAI**, **LangGraph**, **RAG (Retrieval-Augmented Generation)**, and **Twilio/SendGrid** to create an autonomous incident management pipeline for retail environments. It processes visual and audio observations, assesses risk, plans responses, executes communications (voice, email, calls), and learns from outcomes through self-reflection.
+This system combines **Azure OpenAI**, **LangGraph**, **RAG (Retrieval-Augmented Generation)**, **Video Processing**, and **Twilio/SendGrid** to create an autonomous incident management pipeline for retail environments. It processes visual, audio, and video observations, assesses risk, plans responses, executes communications (voice, email, calls), and learns from outcomes through self-reflection.
 
 ### Key Capabilities
 
-- **Multimodal Incident Detection**: Processes both visual (images) and audio inputs
+- **Multimodal Incident Detection**: Processes visual (images), audio, and video inputs
+- **Video Analysis**: Real-time video processing for security and incident detection
 - **Intelligent Risk Assessment**: AI-powered severity scoring and human-in-the-loop decisions
 - **Automated Response Planning**: Generates context-aware response plans using RAG-retrieved policies
 - **Multi-Channel Communication**: Sends voice announcements, emails, and phone calls via Twilio/SendGrid
 - **Self-Learning**: Reflects on outcomes and updates long-term memory
 - **Explainability**: Provides reasoning and policy justification for decisions
 
-## 🏗️ Architecture
+## Architecture
 
 ### System Components
 
 ```
-┌─────────────────┐
-│   FastAPI API   │  ← REST API for incident submission
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────────────────────────────────────────────┐
-│              LangGraph State Machine                    │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐            │
-│  │ Memory   │→ │  Fusion  │→ │   Risk   │            │
-│  │Retrieval │  │  Agent   │  │  Agent   │            │
-│  └──────────┘  └──────────┘  └────┬─────┘            │
-│                                    │                   │
-│                    ┌───────────────┴───────────────┐   │
-│                    ▼                               ▼   │
-│              ┌──────────┐                    ┌────────┐│
-│              │  Human   │                    │ Planning││
-│              │  Review  │                    │  Agent  ││
-│              └────┬──────┘                    └────┬───┘│
-│                   │                               │     │
-│                   └───────────┬──────────────────┘     │
-│                               ▼                        │
-│                    ┌──────────────────┐               │
-│                    │  Response LLM    │               │
-│                    │  (Generate Actions)│              │
-│                    └─────────┬─────────┘               │
-│                              │                         │
-│        ┌─────────────────────┼─────────────────────┐ │
-│        ▼                     ▼                     ▼  │
-│  ┌──────────┐        ┌──────────┐        ┌──────────┐│
-│  │  Voice   │   →    │  Email   │   →    │   Call   ││
-│  │  Agent   │        │  Agent   │        │  Agent   ││
-│  └──────────┘        └──────────┘        └──────────┘│
-│        │                     │                     │  │
-│        └─────────────────────┼─────────────────────┘  │
-│                              ▼                        │
-│                    ┌──────────────────┐               │
-│                    │   Escalation    │               │
-│                    │   Monitoring    │               │
-│                    │  Self-Reflect   │               │
-│                    │    Learning     │               │
-│                    └──────────────────┘               │
-└─────────────────────────────────────────────────────────┘
-         │                    │
-         ▼                    ▼
-┌──────────────┐    ┌──────────────────┐
-│   RAG Engine │    │  Azure OpenAI    │
-│  (Policies)  │    │  (LLM + Vision)  │
-└──────────────┘    └──────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                        Client Layer                           │
+│                                                              │
+│  ┌──────────────┐     ┌──────────────────┐                  │
+│  │  Streamlit   │     │   Frontend Apps   │                  │
+│  │  Testbench   │     │ (POS / IoT / CCTV)│                  │
+│  └──────┬───────┘     └─────────┬────────┘                  │
+│         │                         │                           │
+└─────────┼─────────────────────────┼───────────────────────────┘
+          ▼                         ▼
+┌──────────────────────────────────────────────────────────────┐
+│                         API Layer                             │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │                    FastAPI Server                       │ │
+│  │  • Incident Ingestion                                   │ │
+│  │  • Base64 Image / Audio Upload                           │ │
+│  │  • Human-in-the-Loop Endpoints                           │ │
+│  └───────────────┬────────────────────────────────────────┘ │
+└──────────────────┼───────────────────────────────────────────┘
+                   ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                       Agentic Orchestration Layer                        │
+│                    (LangGraph State Machine)                              │
+│                                                                           │
+│  ┌────────────┐ → ┌──────────────┐ → ┌──────────────┐                    │
+│  │  Memory    │   │ Vision Agent │   │ Speech Agent │                    │
+│  │ Retrieval │   │ (Azure CV)   │   │ (Azure STT)  │                    │
+│  └────────────┘   └──────────────┘   └──────────────┘                    │
+│                                   → ┌──────────────┐                    │
+│                                     │ Video Agent  │                    │
+│                                     └──────┬───────┘                    │
+│                                            ▼                            │
+│                                  ┌──────────────────┐                  │
+│                                  │ Fusion Agent     │                  │
+│                                  │ (Multimodal)    │                  │
+│                                  └──────┬──────────┘                  │
+│                                         ▼                               │
+│                                  ┌──────────────────┐                  │
+│                                  │ Risk Assessment  │                  │
+│                                  │ (Policy + AI)   │                  │
+│                                  └──────┬──────────┘                  │
+│                                         │                               │
+│              ┌──────────────────────────┴──────────────────────────┐   │
+│              ▼                                                     ▼   │
+│     ┌──────────────────┐                               ┌──────────────────┐
+│     │ Human Review     │                               │ Planning Agent   │
+│     │ (HITL Gate)      │                               │ (LLM + SOPs)     │
+│     └──────┬───────────┘                               └──────┬───────────┘
+│            │ (blocks execution)                                │
+│            └──────────────┬───────────────────────────────────┘
+│                           ▼
+│                  ┌──────────────────┐
+│                  │ Response LLM     │
+│                  │ (Action Builder)│
+│                  └──────┬──────────┘
+│                         ▼
+│      ┌────────────┬────────────┬────────────┬────────────┐
+│      ▼            ▼            ▼            ▼            │
+│ ┌────────┐  ┌────────┐  ┌────────┐  ┌──────────────┐   │
+│ │ Voice  │→ │ Email  │→ │  Call  │→ │ Escalation   │   │
+│ │ Agent  │  │ Agent  │  │ Agent  │  │ Agent        │   │
+│ └────────┘  └────────┘  └────────┘  └──────┬───────┘   │
+│                                            ▼           │
+│                                ┌──────────────────┐   │
+│                                │ Monitoring Agent │   │
+│                                └──────┬───────────┘   │
+│                                       ▼               │
+│        ┌──────────────┐ → ┌──────────────┐ → ┌──────────────┐
+│        │ Explainability│   │ Self-Reflect │   │ Learning     │
+│        │ Agent         │   │ Agent        │   │ Agent        │
+│        └──────────────┘   └──────────────┘   └──────────────┘
+│                                                                           │
+└─────────────────────────────────────────────────────────────────────────┘
+                   │                          │
+                   ▼                          ▼
+┌──────────────────────────────┐   ┌──────────────────────────────────┐
+│        RAG Engine             │   │        Azure AI Services          │
+│  • SOPs & Store Policies     │   │  • Azure OpenAI (LLMs)             │
+│  • Incident History          │   │  • Azure Vision                    │
+│  • Vector Store (ChromaDB)   │   │  • Azure Speech-to-Text            │
+└──────────────────────────────┘   └──────────────────────────────────┘
 ```
 
 ### Agent Nodes
 
 1. **Memory Retrieval**: Retrieves similar past incidents from RAG vector store
-2. **Fusion**: Combines vision and audio signals into unified incident understanding
-3. **Risk Assessment**: Evaluates severity (1-5) and risk score (0-1), determines if human review needed
+2. **Fusion**: Combines vision, audio, and video signals into unified incident understanding
+3. **Video Analysis**: Processes video streams for object detection, activity recognition, and anomaly detection
+4. **Risk Assessment**: Evaluates severity (1-5) and risk score (0-1), determines if human review needed
 4. **Human Review**: Handles human-in-the-loop decisions when required
 5. **Planning**: Generates step-by-step response plan using RAG-retrieved SOPs
 6. **Response LLM**: Generates execution actions (voice, email, call, emergency)
@@ -97,7 +133,24 @@ This system combines **Azure OpenAI**, **LangGraph**, **RAG (Retrieval-Augmented
 
 ## 🚀 Installation
 
-### 1. Clone the Repository
+### Frontend Setup
+
+```bash
+# Navigate to frontend directory
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm run dev
+```
+
+The frontend will be available at `http://localhost:3000`
+
+### Backend Setup
+
+1. Clone the Repository
 
 ```bash
 git clone <repository-url>
@@ -169,6 +222,19 @@ Create `rag/policies.json` with your policy documents:
 
 ## 🎮 Usage
 
+## 🚀 API Documentation
+
+### Base URL
+```
+http://localhost:8000
+```
+
+### Authentication
+Most endpoints require a valid JWT token in the Authorization header:
+```
+Authorization: Bearer <your_jwt_token>
+```
+
 ### Starting the API Server
 
 ```bash
@@ -176,10 +242,277 @@ cd app
 uvicorn api:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The API will be available at `http://localhost:8000`
+### System Endpoints
 
-- **API Documentation**: `http://localhost:8000/docs`
-- **Health Check**: `http://localhost:8000/health`
+#### 1. Health Check
+```http
+GET /health
+```
+**Response:**
+```json
+{
+  "status": "ok"
+}
+```
+
+#### 2. System Info
+```http
+GET /info
+```
+**Response:**
+```json
+{
+  "available_endpoints": [
+    "/auth/login",
+    "/auth/register",
+    "/incident",
+    "/human/{incident_id}",
+    "/health",
+    "/info"
+  ],
+  "description": "Retail Autonomous Incident System API with MongoDB and Authentication."
+}
+```
+
+### Authentication Endpoints
+
+#### 1. Register User
+```http
+POST /auth/register
+```
+**Request Body:**
+```json
+{
+  "username": "user@example.com",
+  "password": "securepassword123",
+  "store_id": "store_123"
+}
+```
+
+#### 2. Login
+```http
+POST /auth/login
+```
+**Request Body:**
+```json
+{
+  "username": "user@example.com",
+  "password": "securepassword123"
+}
+```
+**Response:**
+```json
+{
+  "access_token": "jwt_token_here",
+  "token_type": "bearer"
+}
+```
+
+### Incident Management Endpoints
+
+#### 1. Create Incident
+```http
+POST /incident
+```
+**Request Body:**
+```json
+{
+  "store_id": "store_1",
+  "store_state": {
+    "location": "downtown",
+    "staff_count": 5
+  },
+  "signals": {
+    "sensor_id": "cam_01",
+    "timestamp": "2024-01-01T12:00:00Z"
+  },
+  "vision_observation": "base64_encoded_image",
+  "audio_observation": "base64_encoded_audio",
+  "video_observation": "base64_encoded_video"
+}
+```
+**Response:**
+```json
+{
+  "incident_id": "uuid-here"
+}
+```
+
+#### 2. Submit Human Decision
+```http
+POST /human/{incident_id}
+```
+**Request Body:**
+```json
+{
+  "decision": "acknowledge|escalate|dismiss"
+}
+```
+**Response:**
+```json
+{
+  "status": "resumed"
+}
+```
+
+#### 3. List Incidents
+```http
+GET /incidents
+```
+**Response:**
+```json
+{
+  "incidents": [
+    {
+      "incident_id": "uuid-here",
+      "store_id": "store_1",
+      "incident_type": "security",
+      "severity": 3,
+      "risk_score": 0.75,
+      "resolved": false,
+      "requires_human": true,
+      "escalation_required": false
+    }
+  ]
+}
+```
+
+#### 4. Get Incident Details
+```http
+GET /incident/{incident_id}
+```
+**Response:**
+```json
+{
+  "incident_id": "uuid-here",
+  "store_id": "store_1",
+  "resolved": false,
+  "severity": 3,
+  "risk_score": 0.75,
+  "incident_type": "security",
+  "plan": "Response plan details...",
+  "execution_results": "Execution results...",
+  "explanation": "Incident explanation...",
+  "reflection": "System reflection on the incident...",
+  "state": {
+    "incident_id": "uuid-here",
+    "store_id": "store_1",
+    "vision_observation": {
+      "description": "Processed image data..."
+    },
+    "audio_observation": {
+      "transcript": "Processed audio transcript..."
+    },
+    "incident_type": "security",
+    "severity": 3,
+    "risk_score": 0.75,
+    "requires_human": true,
+    "escalation_required": false
+  }
+}
+```
+
+#### 5. Generate Incident Report
+```http
+POST /incident/{incident_id}/summarize-report
+```
+**Response:**
+```json
+{
+  "summary": "Detailed incident report in markdown format...",
+  "recommendations": ["Action item 1", "Action item 2"],
+  "severity": "High",
+  "risk_level": "Elevated"
+}
+```
+
+#### 6. Generate Response Plan
+```http
+POST /incident/{incident_id}/summarize-plan
+```
+**Response:**
+```json
+{
+  "executive_summary": "Brief summary of the response plan...",
+  "action_items": ["Step 1", "Step 2"],
+  "timeline": "Estimated resolution time..."
+}
+```
+
+### Error Responses
+
+#### 400 Bad Request
+```json
+{
+  "detail": "Error message describing the issue"
+}
+```
+
+#### 401 Unauthorized
+```json
+{
+  "detail": "Could not validate credentials"
+}
+```
+
+#### 403 Forbidden
+```json
+{
+  "detail": "Access denied: Incident store does not match user store"
+}
+```
+
+#### 404 Not Found
+```json
+{
+  "detail": "Incident not found"
+}
+```
+
+#### 500 Internal Server Error
+```json
+{
+  "error": "Error message describing the internal error"
+}
+```
+
+## 📱 Frontend Features
+
+### Dashboard
+- Real-time incident monitoring
+- Video feed integration
+- Alert notifications
+- Status overview
+
+### Incident Management
+- Create and track incidents
+- Attach media (images, videos, audio)
+- Assign to team members
+- Add notes and updates
+
+### Per-Store Policy Management** 
+- Store-specific policy documents
+- Real-time policy updates
+- Version control for policies
+
+### Real-time Chat** 💬
+- Store-wide group chats
+- Direct messaging between stores
+- Online/offline status
+- Typing indicators
+- Message history
+
+### Video Analysis
+- Live video feed monitoring
+- Object detection overlay
+- Activity recognition
+- Suspicious activity alerts
+
+### Reporting
+- Generate incident reports
+- Export data (CSV, PDF)
+- Performance metrics
+- Audit logs
 
 ### Using the Streamlit Interface
 
@@ -289,14 +622,7 @@ The RAG (Retrieval-Augmented Generation) system provides:
 - **Configuration**: Azure Cognitive Services Speech SDK
 - **In-Store**: Real-time text-to-speech for store announcements
 
-## 🧪 Testing
 
-### Unit Testing
-
-```bash
-# Test individual agents
-python -m pytest tests/
-```
 
 ### Integration Testing
 
@@ -319,37 +645,63 @@ Launch the Streamlit interface and upload test images/audio files.
 
 ## 📁 Project Structure
 
-```
+```bash
 IC-Hackathon/
-├── app/
-│   ├── agents/              # Agent node implementations
-│   │   ├── call.py          # Twilio call execution
-│   │   ├── email.py         # SendGrid email execution
-│   │   ├── fusion.py        # Multimodal fusion
-│   │   ├── learning.py      # Long-term memory updates
-│   │   ├── memory_retrieval.py  # RAG queries
-│   │   ├── planning.py      # Response planning
-│   │   ├── response_llm.py  # Action generation
-│   │   ├── risk.py          # Risk assessment
-│   │   ├── self_reflection.py  # Post-incident analysis
-│   │   └── ...
-│   ├── config/              # Configuration modules
-│   │   └── comm_config.py   # Twilio/SendGrid config
-│   ├── rag/                 # RAG system
-│   │   ├── config.py        # Azure OpenAI config
-│   │   ├── embeddings.py    # Embedding generation
-│   │   ├── loader.py        # Document loading
-│   │   ├── rag_engine.py    # RAG query engine
-│   │   ├── retriever.py     # Vector search
-│   │   └── vectorstore.py   # FAISS vector store
-│   ├── api.py               # FastAPI application
-│   ├── graph.py             # LangGraph state machine
-│   ├── schemas.py           # Pydantic models
-│   ├── state.py             # State type definitions
-│   └── streamlit_interface.py  # Testing UI
-├── requirements.txt
-├── README.md
-└── TWILIO_SETUP.md          # Twilio configuration guide
+├── app/                      # Backend application
+│   ├── agents/               # Agent implementations
+│   │   ├── call.py           # Call handling agent
+│   │   ├── email.py          # Email notification agent
+│   │   ├── escalation.py     # Escalation management
+│   │   ├── explainability.py # Explanation generation
+│   │   ├── fusion.py         # Multi-modal fusion
+│   │   ├── human.py          # Human-in-the-loop handling
+│   │   ├── learning.py       # Learning from incidents
+│   │   ├── memory_decay.py   # Memory decay logic
+│   │   ├── memory_retrieval.py # Memory retrieval
+│   │   ├── monitoring.py     # System monitoring
+│   │   ├── planning.py       # Response planning
+│   │   ├── response_llm.py   # LLM-based response generation
+│   │   ├── risk.py           # Risk assessment
+│   │   ├── self_reflection.py # System self-reflection
+│   │   ├── speech.py         # Speech processing
+│   │   ├── video.py          # Video analysis agent
+│   │   ├── vision.py         # Computer vision processing
+│   │   └── voice.py          # Voice response handling
+│   ├── config/               # Configuration files
+│   ├── rag/                  # RAG implementation
+│   ├── services/             # External service integrations
+│   │   ├── azure_speech.py   # Azure Speech Service
+│   │   ├── azure_video_indexer.py # Azure Video Indexer
+│   │   ├── azure_vision.py   # Azure Computer Vision
+│   │   ├── gemini_service.py # Google Gemini integration
+│   │   └── report_summarization_prompt.py # Report generation
+│   ├── api.py                # Main FastAPI application
+│   ├── auth.py               # Authentication logic
+│   ├── auth_router.py        # Authentication routes
+│   ├── database.py           # Database configuration
+│   ├── graph.py              # LangGraph state machine
+│   ├── models.py             # Database models
+│   ├── schemas.py            # Pydantic schemas
+│   ├── state.py              # State management
+│   └── streamlit_interface.py # Streamlit UI
+│
+├── frontend/                 # React frontend application
+│   ├── public/               # Static files
+│   └── src/                  # Source code
+│       ├── components/       # Reusable UI components
+│       ├── pages/            # Page components
+│       ├── services/         # API service layer
+│       ├── store/            # State management
+│       └── App.tsx           # Main application component
+│
+├── .env.example             # Example environment variables
+├── .gitignore               # Git ignore file
+├── AZURE_SERVICES_SETUP.md  # Azure services setup guide
+├── README.md                # This file
+├── REPORT_SUMMARIZATION_DESIGN.md # Report design doc
+├── requirements.txt         # Python dependencies
+├── TESTING_GUIDE.md        # Testing documentation
+└── TWILIO_SETUP.md         # Twilio setup guide
 ```
 
 ## 🔧 Configuration
@@ -379,15 +731,7 @@ Policies can be loaded from:
 4. **Security**: Implement authentication, rate limiting, input validation
 5. **Scaling**: Use container orchestration (Kubernetes, Docker Compose)
 
-### Docker Deployment
 
-```dockerfile
-FROM python:3.9-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-COPY app/ ./app/
-CMD ["uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
 ## 🐛 Troubleshooting
@@ -400,45 +744,5 @@ CMD ["uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8000"]
 4. **RAG Not Finding Policies**: Ensure `rag/policies.json` exists or default policies are loaded
 5. **Import Errors**: Ensure all dependencies are installed: `pip install -r requirements.txt`
 
-### Debug Mode
 
-Enable debug logging:
-
-```python
-import logging
-logging.basicConfig(level=logging.DEBUG)
-```
-
-## 📚 Additional Documentation
-
-- [Twilio Setup Guide](TWILIO_SETUP.md) - Detailed Twilio/SendGrid configuration
-- [API Documentation](http://localhost:8000/docs) - Interactive API docs (when server running)
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
-
-## 📄 License
-
-[Your License Here]
-
-## 🙏 Acknowledgments
-
-- **LangGraph**: Multi-agent orchestration framework
-- **Azure OpenAI**: LLM and embeddings
-- **Twilio**: Voice and SMS communication
-- **SendGrid**: Email delivery
-- **FastAPI**: Modern Python web framework
-
-## 📞 Support
-
-For issues, questions, or contributions, please open an issue on GitHub.
-
----
-
-**Built with ❤️ for autonomous retail incident management**
 
